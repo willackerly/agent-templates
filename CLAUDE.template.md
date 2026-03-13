@@ -76,6 +76,19 @@ E2E specs in a dedicated test directory.
 Tag E2E tests (`@critical`, `@visual`).
 -->
 
+### Testing Cascade
+
+**Iterate at the speed of a single test, not the full pipeline.** See `AGENTS.md` "Testing Cascade" for full rules.
+
+| Tier | Speed | What | When |
+|------|-------|------|------|
+| T0 Typecheck | <5s | Changed package | Every edit |
+| T1 Targeted | <10s | Single test file | Every change |
+| T2 Package | <30s | One package suite | Before commit |
+| T3 Full unit | <60s | All unit tests | Before push |
+| T4 Visual/E2E | <2min | E2E smoke | UI changes |
+| T5 Full suite | <10min | Everything | Release prep |
+
 ### E2E Test Infrastructure
 
 <!-- If your project has multi-server E2E tests, document the approach here.

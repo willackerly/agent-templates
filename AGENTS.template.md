@@ -158,6 +158,53 @@ two-line header comment or update the folder README so others can
 skim responsibilities without reading implementations.
 -->
 
+## Testing Cascade (MANDATORY)
+
+**Fast inner loops, rigorous outer gates.** Never run the full suite when a targeted test will do. Iterate at the speed of a single test file, promote through tiers of increasing rigor only when the current tier passes.
+
+### The Tiers
+
+<!-- Customize commands for your project's test runner and package manager -->
+
+| Tier | Name | Target | Speed | When to Run | Command |
+|------|------|--------|-------|-------------|---------|
+| **T0** | Typecheck | Changed package | <5s | Every meaningful edit | `pnpm --filter <pkg> exec tsc --noEmit` |
+| **T1** | Targeted | Single test file | <10s | Every change cycle | `npx vitest run path/to/test.ts` |
+| **T2** | Package | One package's suite | <30s | Before committing | `pnpm --filter <pkg> test` |
+| **T3** | Cross-package | All unit/integration | <60s | Before pushing | `pnpm test` |
+| **T4** | Visual/E2E | Visual regression, E2E | <2min | UI/render changes | `pnpm test:e2e:smoke` |
+| **T5** | Full suite | Everything | <10min | Release prep | `pnpm test && pnpm test:e2e && pnpm lint` |
+
+### Rules for Agents
+
+1. **Iterate at T1.** Your inner loop is: edit → run the specific test → edit. This should take <10 seconds.
+2. **Promote on success.** Only escalate to the next tier when the current one passes. Never skip tiers.
+3. **Background the expensive tiers.** T3+ should run in background sub-agents while you keep coding.
+4. **Use `--related` when unsure.** Most test runners support running tests related to changed files — use this to auto-detect affected tests.
+5. **Never run T5 in your inner loop.** T5 is a release gate, not a development tool. Running the full suite to check one function is like deploying to prod to test a button color.
+6. **T4 only for visual/UI changes.** If you changed business logic or a utility, T1-T3 are sufficient.
+7. **Fan out validation.** After finishing a body of work, launch T3, T4, and lint as parallel background agents.
+
+### Anti-Patterns
+
+- **Run T5 after every change** — You'll spend more time waiting than coding.
+- **Skip T1 and go straight to T3** — T3 runs hundreds of tests. T1 runs one. The feedback delay kills iteration speed.
+- **Block on T3 while coding** — Run T3 in a background agent. Keep working on the next thing.
+- **Run `pnpm test` to check one function** — Find the exact test file. Run that one.
+
+### Why This Matters
+
+Traditional CI/CD pipelines are designed for correctness, not velocity. They run everything, every time, sequentially. That's appropriate for merge gates but catastrophic for development loops. The cascade inverts this: start with the fastest possible validation that covers your change, and only expand scope when you have reason to. This means 10x faster feedback, unblocked iteration, and proportional rigor.
+
+<!-- Create a docs/testing/TESTING_CASCADE.md with full details including:
+     - Concrete commands for each tier
+     - Agent workflow patterns (single-package feature, cross-package refactor, UI change)
+     - Sub-agent validation fanout patterns
+     - Detailed anti-patterns with explanations
+-->
+
+---
+
 ## Testing Expectations
 
 <!-- Describe your testing approach. Example:
