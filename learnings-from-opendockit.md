@@ -193,6 +193,32 @@ A weekly cron job or `/freshness-audit` skill scans for files where the freshnes
 
 ## 7. Agent Collaboration Patterns
 
+### Pre-Launch Audit: The 50% Waste Incident (2026-03-16)
+
+The most expensive lesson came from launching 6 worktree agents without verifying what the codebase already contained. Three out of six agents (50%) did completely redundant work:
+
+- **OffscreenCanvas worker agent** — Created a duplicate implementation. `packages/pptx/src/workers/` already had a full worker scaffold with 72 tests from a prior wave. Zero value.
+- **Three DOCX feature agents** (images, headers/footers, columns) — All features already existed in mature forms in the DOCX package. Only test files were salvageable.
+- The other two agents (font fidelity deep dive, build config check) provided genuine value.
+
+**Root cause:** Memory and documentation captured project milestones ("Wave 3 complete", "DOCX Endstate Waves 1-3 done") but not operational state ("what specific features exist in which files"). QUICKCONTEXT.md listed features as "What's Next" that had already been implemented. The orchestrating agent trusted its own memory and docs over the actual codebase.
+
+**The fix — Pre-Launch Audit protocol:**
+
+Before launching ANY fan-out campaign, the orchestrating agent must:
+
+1. **Grep for existing implementations** in the target packages. If you're planning an agent to "add header/footer rendering," first `grep -rn "HeaderFooter\|header-footer\|renderHeader" packages/docx/src/` to see if it's already there.
+
+2. **Check test counts.** Run `pnpm --filter @opendockit/<pkg> test 2>&1 | tail -3`. If the DOCX package has 684 tests but your memory says 129, substantial work has been done since your last context.
+
+3. **Read actual source directories.** `ls packages/<pkg>/src/<subdir>/` and `wc -l *.ts` tell you what exists. Don't rely on memory or docs alone.
+
+4. **Cross-reference "What's Next" against code.** If QUICKCONTEXT says a feature is "planned" or "ready," verify it's not already implemented.
+
+**Template recommendation:** Add this as a mandatory section in AGENTS.template.md under the fan-out patterns section. The protocol takes 2-3 minutes and prevents hours of wasted agent compute.
+
+**Underlying principle:** Agents trust context they are given. If your memory says "Feature X is planned," the agent believes it. But memory drifts from reality at the speed of code changes. The pre-launch audit forces a reality check: trust your memory, but verify against the filesystem.
+
 ### Fan-Out Strategies That Worked
 
 **Wave-based execution** was the most effective pattern. We organized work into waves of 6-9 parallel worktree agents, where each wave's agents had non-overlapping file assignments. Quick wins (small, independent fixes) were merged to main first, giving wave agents a clean base. Each wave had a conflict matrix predicting which agents might touch adjacent code.
