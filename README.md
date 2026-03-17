@@ -254,3 +254,169 @@ in isolation — it's a bottom-up collection of patterns that proved their
 value in real agent-driven development, organized into a coherent system
 after the fact. The [learnings document](learnings-from-opendockit.md)
 captures the raw failure analysis and war stories that motivated each pattern.
+
+---
+
+## Future Concepts
+
+Ideas we believe are directionally correct but haven't built yet.
+These are design sketches, not specifications.
+
+### Contract Vendoring
+
+**Problem:** When multiple repos implement the same contracts (e.g., a
+client SDK and a server both implement `CONTRACT:P1-WIRE-FORMAT.1.0`),
+each repo needs a local copy of the contract to reference. But copies drift.
+
+**Concept:** Vendor contracts the way Go vendors dependencies. A project's
+`architecture/` directory contains contracts it *owns* (authored here) and
+contracts it *vendors* (copied from an upstream source). Vendored contracts
+are read-only locally — updates come from the upstream, not from local edits.
+
+```
+architecture/
+  CONTRACT-C1-BLOBSTORE.2.1.md          # owned — authored in this repo
+  vendor/
+    CONTRACT-P1-WIRE-FORMAT.1.0.md      # vendored — from shared-contracts repo
+    CONTRACT-I1-SESSION.1.0.md          # vendored — from shared-contracts repo
+    VENDOR.lock                          # source repo, commit hash, date
+```
+
+A `scripts/vendor-contracts.sh` would pull from the upstream repo and update
+the lock file. CI would verify vendored contracts match their upstream source.
+
+### Cryptographic Contract Signing
+
+**Problem:** Vendored contracts could be tampered with — a child repo could
+modify a vendored contract to weaken security requirements or change interface
+boundaries, and downstream consumers would have no way to detect it.
+
+**Concept:** Contracts get cryptographically signed when they pass a deep
+trust checklist. The signature covers the contract content and version. Child
+repos can vendor the contract but cannot modify it without invalidating the
+signature.
+
+```
+architecture/
+  CONTRACT-P1-WIRE-FORMAT.1.0.md        # the contract
+  CONTRACT-P1-WIRE-FORMAT.1.0.md.sig    # detached signature
+```
+
+**The trust checklist (signing requires all):**
+- [ ] BDD scenarios reviewed and approved by product owner
+- [ ] Contract reviewed by architect (behavioral contracts, error contracts)
+- [ ] Security review complete (if security-relevant)
+- [ ] Contract tests written and passing
+- [ ] At least one reference implementation exists
+- [ ] Cross-repo impact assessment complete (who else implements this?)
+
+**Verification:** `scripts/verify-contract-signatures.sh` checks all
+signatures in CI. A failed signature = someone modified a vendored contract
+without going through the trust process.
+
+**Why this matters:** In high-assurance environments (financial services,
+healthcare, defense), the integrity of architectural contracts is a
+compliance concern. Signing makes contract provenance auditable.
+
+### Expert Agent Hierarchy
+
+**Problem:** Today, the orchestrating agent (the one you talk to) does
+everything: reads BDD, understands architecture, knows the code, delegates
+to subagents. This works for small-to-medium projects, but at scale the
+context requirements exceed what a single agent can hold. The orchestrator
+becomes a bottleneck — it can't deeply understand product intent, architecture,
+and all the code simultaneously.
+
+**Concept:** A hierarchy of long-lived expert agents, each with a discrete
+role, persistent context, and clear communication boundaries:
+
+```
+┌─────────────────────────────────────────────────────┐
+│                    PRODUCT AGENT                     │
+│  Reads: BDD features, epics, stories, personas      │
+│  Reads: Contract SUMMARIES (not full contracts)      │
+│  Answers: "What should we build and why?"            │
+│  Talks to: Architect (down)                          │
+└──────────────────────┬──────────────────────────────┘
+                       │
+┌──────────────────────▼──────────────────────────────┐
+│                   ARCHITECT AGENT                    │
+│  Reads: Product summaries (from Product Agent)       │
+│  Reads: Contract documents IN DETAIL                 │
+│  Reads: Contract registry, implementation map        │
+│  Does: grep CONTRACT:{id} at session start           │
+│  Answers: "How should it be structured?"             │
+│  Talks to: Product (up), Eng Lead (down)             │
+└──────────────────────┬──────────────────────────────┘
+                       │
+┌──────────────────────▼──────────────────────────────┐
+│                  ENG LEAD AGENT                      │
+│  Reads: Product + Architecture SUMMARIES             │
+│  Reads: ALL THE CODE (if viable)                     │
+│  Reads: Test results, CI status, QUICKCONTEXT        │
+│  Answers: "How do we implement this?"                │
+│  Talks to: Architect (up), Engineers (down)          │
+│  DEFAULT PERSONA — this is the agent you talk to     │
+└──────────────────────┬──────────────────────────────┘
+                       │
+┌──────────────────────▼──────────────────────────────┐
+│               ENGINEER AGENTS (subagents)            │
+│  Receive: Repo pointers, contract pointers,          │
+│           task description, subagent template         │
+│  Read: subagent-guidelines.md + assigned template    │
+│  Do: The actual implementation work                  │
+│  Report: Results to Eng Lead via results files       │
+│  Isolation: Always worktree                          │
+└─────────────────────────────────────────────────────┘
+```
+
+**Key design principles:**
+
+1. **Each level reads summaries from above, detail at its own level.** The
+   Product Agent doesn't read code. The Architect doesn't read BDD scenarios
+   in detail. The Eng Lead doesn't read contract behavioral specifications
+   in detail. Each layer trusts the layer above to have done its job.
+
+2. **Communication is structured, not conversational.** The Architect
+   doesn't chat with the Eng Lead — it writes a structured brief: "Implement
+   CONTRACT:C4-WHATEVER.1.0. Here are the relevant repos, here's the
+   contract, here are the constraints." The Eng Lead doesn't chat with
+   Engineers — it writes a subagent invocation with template, parameters,
+   and context files.
+
+3. **The Eng Lead is the default persona.** When a human opens Claude Code
+   and starts working, they're talking to the Eng Lead. It reads the Cold
+   Start Quad, understands the code, and delegates down to Engineer
+   subagents. It escalates up to Architect (plan mode) when contracts need
+   to change.
+
+4. **Engineers are subagents, not peers.** They receive fully specified
+   tasks via subagent templates. They don't make architectural decisions.
+   They don't expand scope. They do their assigned work and report results.
+   This is the subagent template system we already have — the hierarchy
+   just formalizes who delegates and how.
+
+5. **Each expert agent could be a Claude Code skill or a long-lived session.**
+   The Product Agent could be a `/product` skill that loads BDD context and
+   produces product briefs. The Architect could be a `/architect` skill that
+   loads contracts and produces implementation briefs. Or they could be
+   persistent sessions that maintain state across conversations.
+
+**What this enables at scale:**
+- A Product Agent that deeply understands 50 user stories doesn't need to
+  also understand 200 source files
+- An Architect that deeply understands 30 contracts doesn't need to also
+  track sprint status
+- An Eng Lead that knows all the code doesn't need to also know the
+  competitive landscape or regulatory requirements
+- Engineers that implement one task at a time don't need any of the above —
+  they just need their contract, their template, and their assigned files
+
+**Open questions:**
+- How do expert agents persist context across sessions? Claude Code memory?
+  Dedicated context files per agent role?
+- How are summaries generated and kept fresh? Same drift problem as docs.
+- What's the minimum project size where this hierarchy pays off vs. a single
+  orchestrating agent?
+- Can the hierarchy be dynamic — starting flat and adding layers as the
+  project grows?
