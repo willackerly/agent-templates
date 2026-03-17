@@ -203,6 +203,12 @@ Pre-approved for fetching:
 14. **Error handling** - Add/improve error handling and logging
 15. **Performance fixes** - Optimize slow code paths
 
+### CHECK TEMPLATES FIRST
+
+Before doing specialized tasks (UX review, security audit, code review, etc.),
+check `agents/subagent-prompts-index.md` for a matching template. Templates
+encode how we want the task done — use them instead of guessing.
+
 ### ASK ONLY FOR
 
 **Fundamental architectural decisions** that would be hard to reverse:

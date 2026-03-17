@@ -110,6 +110,71 @@ Before diving into code, ask:
 ### Why This Matters
 Multiple agents work async on this codebase. Docs drift when agents complete work but don't update all references. Taking 5 minutes to verify state prevents hours of wasted effort on outdated priorities.
 
+## Subagent Prompt Templates
+
+If this project has an `agents/` directory, it contains reusable prompt
+templates for subagent delegation. **Check the index before doing specialized
+tasks** — there may be a template that encodes how we want it done.
+
+```
+agents/
+  subagent-guidelines.md       # shared behavioral contract — every subagent reads this
+  subagent-prompts-index.md    # catalog of available templates
+  subagent-prompts/            # one .md per template (UX review, security scan, etc.)
+  results/                     # subagent output files
+  findings/                    # architectural/security findings from subagents
+```
+
+### When to Use Templates
+
+- **Single invocation:** Point one subagent at a template for a task you want
+  done *your way*. A `ux-review.md` template encodes your definition of UX
+  review — the agent doesn't guess.
+- **Parallel fan-out:** Same template, N agents, different parameters (shard
+  ranges, file subsets, package names).
+
+### How to Invoke
+
+```
+Agent(prompt: "Read agents/subagent-guidelines.md for behavioral rules.
+              Read agents/subagent-prompts/<template>.md for your task.
+              Parameters: TARGET=<path> OUTPUT=agents/results/<name>.json")
+```
+
+For fan-out, add `isolation: "worktree"` and launch multiple in one message.
+
+### Pre-Launch Audit (MANDATORY Before Fan-Out)
+
+Before launching ANY parallel agent campaign, the orchestrating agent must
+verify what the codebase actually contains — not what docs or memory say.
+This prevents the 50% waste incident (see learnings-from-opendockit.md §7).
+
+1. **Grep for existing implementations** in target packages. If planning an
+   agent to "add feature X," first check if X already exists.
+2. **Check test counts.** If docs say 129 tests but `pnpm test` shows 684,
+   substantial work has happened since your last context.
+3. **Read actual source directories.** `ls` and `wc -l` tell you what exists.
+4. **Cross-reference "What's Next"** in QUICKCONTEXT.md against code — verify
+   planned items haven't already been implemented.
+
+This takes 2-3 minutes and prevents hours of wasted agent compute.
+
+### Feature Inventory Protocol
+
+Before assigning a worktree agent to modify a file with **>300 lines of
+logic**, generate a feature inventory first: an explicit list of every
+behavior the file implements, linked to its exercising test.
+
+Use the `agents/subagent-prompts/feature-inventory.md` template, then include
+the output in the worktree agent's prompt with: "Preserve all listed features
+unless explicitly told to remove them."
+
+**Why:** Without an inventory, agents restructure files around their assigned
+task and may silently delete existing features they don't recognize as
+intentional (see learnings-from-opendockit.md §3, the W6 incident).
+
+---
+
 ## Project Structure & Module Ownership
 
 <!-- Describe your project's layout and ownership conventions. Example:
@@ -508,6 +573,49 @@ Vite, Next.js, and Create React App all **bake environment variables into the bu
 - `JWT_SECRET` is runtime — only needs to be set on the server
 - After deploy, open DevTools Network tab and verify API requests go to the expected URL
 -->
+
+### Agent Collaboration Patterns
+
+#### Worktree Isolation Rules
+
+- **Use worktrees for:** implementation work that modifies files, speculative
+  approaches, any change that might conflict with parallel agents.
+- **Use main-thread sub-agents for:** read-only research, validation (tests,
+  typechecks, lint), synthesizing information from multiple files.
+- **Never use worktrees for:** changes to a single shared file (merge will
+  conflict), changes requiring real-time coordination, changes with unclear
+  scope (agents will expand into each other's territory).
+
+#### Cherry-Pick Conflict Resolution
+
+Conflicts between worktree agents are expected, not exceptional:
+
+1. Understand which version is the superset — don't blindly take "theirs" or "ours"
+2. Merge manually with understanding of both agents' intent
+3. Run T2 (package-level tests) immediately after resolution
+4. When a fix involves a common pattern across multiple files, assign all affected files to the same agent
+
+#### Post-Merge Integration
+
+Plan post-merge integration as an explicit step, not an afterthought:
+
+- Fan-out plans should include a "post-merge wiring" section listing which
+  cross-file connections need to be made after all worktrees merge
+- Budget ~30% of agent time for fix-up, not 0%
+- Agents creating new files are safest (no existing state to conflict with)
+- Agents modifying existing files need diff-against-main review
+- Agents writing tests for existing code have ~50% wrong-assumption rate —
+  always run on main before committing
+
+#### Freshness Markers
+
+<!-- freshness: YYYY-MM-DD -->
+
+Status-bearing sections in this file (Active Workstreams, etc.) should
+include a freshness timestamp. Agents should check this date and treat
+claims in sections >2 weeks stale with skepticism.
+
+---
 
 ### Quality Gates (run before every push)
 

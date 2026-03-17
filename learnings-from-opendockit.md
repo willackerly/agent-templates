@@ -338,6 +338,124 @@ This principle generalizes: whenever you're evaluating the quality of a complex 
 
 ---
 
+## 11. Subagent Prompt Templates: Curated Context as Infrastructure
+
+### The Problem
+
+Every time you spawn a subagent, you either: (a) write an inline prompt from scratch (error-prone, non-repeatable, drifts between sessions), or (b) rely on the agent's general knowledge and hope it does the right thing. Both produce inconsistent results. The orchestrating agent wastes tokens re-explaining what a "UX review" or "security audit" means every single time.
+
+### The Solution: Version-Controlled Prompt Templates
+
+Store reusable subagent prompts as `.md` files in an `agents/subagent-prompts/` directory. Each template defines: the task, required parameters, output format, success criteria, and context files to read. A shared `subagent-guidelines.md` defines behavioral contracts (worktree usage, result checkpointing, architectural change detection).
+
+Directory structure:
+
+```
+agents/
+  subagent-guidelines.md         # shared behavioral contract
+  subagent-prompts-index.md      # catalog of available templates
+  subagent-prompts/
+    ux-review.md                 # UX audit methodology + criteria
+    security-surface-scan.md     # crypto/auth/input validation audit
+    contract-audit.md            # interface conformance verification
+    test-shard-runner.md         # parallel test execution
+    doc-drift-detector.md        # doc-vs-code consistency check
+```
+
+### Single-Invocation Templates (Not Just Fan-Out)
+
+The critical insight: **templates are just as valuable for single invocations as for parallel fan-out.** When you ask an agent to do a "UX review," you're implicitly relying on the agent to know what a good UX review covers. But the agent's definition of "UX review" may not match yours — it might miss accessibility, or skip mobile responsiveness, or not check against your design system.
+
+A `ux-review.md` template encodes *your* definition of UX review: the specific criteria, the heuristics, the reference documents, the output format. The agent doesn't guess — it follows the template. If the template is wrong, you fix it once and every future review benefits.
+
+**Examples of high-value single-invocation templates:**
+
+| Template | What it encodes |
+|----------|----------------|
+| `ux-review.md` | Your specific UX criteria, design system references, accessibility standards, output format |
+| `security-review.md` | OWASP checklist tailored to your stack, crypto rules, known vulnerability patterns |
+| `code-review.md` | Your team's review standards, style guide references, architectural principles to check against |
+| `incident-postmortem.md` | Your postmortem format, required sections, blameless language guidelines |
+| `api-design-review.md` | REST/gRPC conventions, naming standards, versioning policy, error format |
+| `onboarding-brief.md` | How to explain the codebase to a new agent (or human), what to cover, what order |
+
+The pattern: **if you've ever said "no, not like that — here's how we do X," that correction belongs in a template.** Next time, the agent reads the template and gets it right the first time. This is the feedback loop that makes agents learn across sessions.
+
+### Relationship to Claude Skills
+
+Claude Code has a native concept called "skills" (`.claude/skills/<name>/SKILL.md`) that serves a related but distinct purpose:
+
+| | **Skills** | **Subagent Templates** |
+|---|---|---|
+| **Invocation** | `/skill-name` or auto-triggered | Orchestrator tells agent to read the file |
+| **Discovery** | Framework auto-discovers by description | Manual — orchestrator must know to use them |
+| **Context** | Injected into main context (or forked) | Always separate subagent context |
+| **Parameterization** | `$ARGUMENTS` substitution built in | Convention-based (template defines its params) |
+| **Best for** | Extending Claude's repertoire for single tasks | Fan-out, specialized reviews, repeatable workflows |
+
+**They're complementary.** A skill can orchestrate template-driven fan-out: a `/shard-tests` skill that reads a template, computes shard boundaries, and launches N subagents. For single-invocation specialized tasks (UX review, security audit), either mechanism works — skills are more discoverable, templates are more portable across projects and tools.
+
+**Recommendation:** Use skills for workflows the *user* invokes directly (`/review`, `/deploy`, `/audit`). Use subagent templates for workflows the *orchestrating agent* delegates to subagents. The skill is the button; the template is the instruction manual the worker reads.
+
+### Template Design Principles
+
+1. **Declarative, not procedural.** Describe the task, inputs, outputs, and success criteria. Let the agent decide *how* to accomplish it.
+
+2. **Explicit output format.** The orchestrator needs to parse results. Specify JSON schema, markdown structure, or whatever format enables aggregation.
+
+3. **Context files as parameters.** Instead of inlining domain knowledge, point to existing project files: "Read `docs/design-system.md` for our component standards." This prevents the template from drifting from the source of truth.
+
+4. **Success criteria are testable.** "Output file exists and is valid JSON" is testable. "Do a good review" is not.
+
+5. **Include anti-patterns.** If agents consistently make a specific mistake on this task, say so: "Do NOT mock the database in these tests — use the integration test harness."
+
+### Fan-Out Patterns
+
+For parallel execution, templates support four patterns:
+
+| Pattern | Description | Example |
+|---------|-------------|---------|
+| **Shard** | Same task, different data slices | Test runner: agent N runs tests 500-999 |
+| **Map-Reduce** | Parallel map, single reduce | Each agent audits one package, orchestrator merges findings |
+| **Speculative** | Same task, different approaches | Two agents fix a bug from different angles, keep the better fix |
+| **Progressive** | Wide first pass, narrow second pass | Round 1: coarse analysis of all files. Round 2: deep dive on flagged areas |
+
+### The File System as Message Bus
+
+Coordinating parallel agents doesn't require infrastructure:
+
+- **Inputs:** shared template files, data files, guidelines
+- **Outputs:** predictable paths (`agents/results/shard-NN.json`)
+- **Persistence:** git commit from worktree branches
+- **Merge:** orchestrator reads all shard results, produces merged output
+
+No queues, no databases, no coordination services. Git is the transport layer.
+
+### Behavioral Contracts via Shared Guidelines
+
+A `subagent-guidelines.md` file defines rules all subagents follow:
+
+- **Isolation:** Always use worktree; commit before completing
+- **Result format:** Write to specified output path in specified format
+- **Architectural findings:** If you discover something that affects contracts, interfaces, or security, document it in `agents/findings/` — don't silently act on it
+- **Scope discipline:** Do your assigned work, nothing more. Don't "helpfully" expand scope
+- **Quality gates:** Run relevant tests before committing. Follow project coding style.
+
+This prevents the inconsistency problem: without shared guidelines, each subagent makes its own decisions about commit conventions, test running, scope boundaries. With them, every agent behaves predictably.
+
+### Template Recommendations for agent-templates
+
+**Add to AGENTS.template.md:**
+- A "Subagent Prompt Templates" section under fan-out patterns
+- Reference the `agents/` directory structure
+- Include the single-invocation pattern explicitly — templates aren't just for parallelism
+
+**Add to CLAUDE.template.md:**
+- Under "Agent Autonomy," note that agents should check for existing templates before doing specialized tasks (reviews, audits, etc.)
+- A "Subagent Templates" command section showing how to invoke
+
+---
+
 ## Closing Thought
 
 The deepest lesson from OpenDocKit is that agent-driven development requires a **different kind of engineering discipline** than traditional development. The traditional discipline is about code quality — clean abstractions, test coverage, performance. The agent discipline is about **information environment quality** — accurate documentation, stable contracts, explicit context boundaries, and automated verification that the map still matches the territory. The code can be excellent while the information environment decays, and when that happens, agents become powerful tools working from flawed premises. Invest in the information environment at least as much as you invest in the code.
