@@ -335,7 +335,7 @@ philosophy and `architecture/README.md` for the naming/linking system.
 |------------|-----------|----------------|
 | **Feature A** | `packages/feature-a/`, `docs/plans/FEATURE_A_PLAN.md` | Active development |
 | **Feature B** | `docs/architecture/FEATURE_B.md` | Maintenance mode |
-| **Cross-cutting** | `AGENTS.md`, `QUICKCONTEXT.md`, `TODO.md`, `KNOWN_ISSUES.md` | All agents share |
+| **Cross-cutting** | `AGENTS.md`, `QUICKCONTEXT.md`, `TODO.md` | All agents share |
 -->
 
 #### Archive Policy
@@ -345,7 +345,7 @@ philosophy and `architecture/README.md` for the naming/linking system.
 - Status snapshot > 3 months old AND newer snapshot exists
 - Planning doc for approach not implemented
 
-**Never archive:** `AGENTS.md`, `QUICKCONTEXT.md`, `TODO.md`, `KNOWN_ISSUES.md`, `CLAUDE.md`, latest architecture docs, specifications
+**Never archive:** `AGENTS.md`, `QUICKCONTEXT.md`, `TODO.md`, `CLAUDE.md`, `methodology.md`, latest architecture contracts
 
 **How to archive:**
 1. Move to `docs/archive/YYYY-MM-DD-description/`
@@ -362,7 +362,7 @@ philosophy and `architecture/README.md` for the naming/linking system.
 | **API or data format** | `docs/specifications/` |
 | **Testing approach** | `docs/testing/` |
 | **Current state** | `docs/current-status/STATUS_YYYY-MM-DD.md` |
-| **Blockers** | `KNOWN_ISSUES.md` |
+| **Blockers** | `TODO.md` "Known Issues & Blockers" section |
 | **Tasks** | `TODO.md` (track with TRACKED-TASK: in code) |
 | **File purpose** | Nearest README |
 | **Historical context** | `docs/archive/` |
@@ -736,7 +736,7 @@ Weekly or per-sprint, audit `TRACKED-TASK:` comments:
 > |------------|-----------|----------------|
 > | **Auth** | `packages/api/src/auth/`, `docs/plans/AUTH_PLAN.md` | Active development |
 > | **Dashboard** | `packages/web/src/dashboard/`, `docs/architecture/DASHBOARD.md` | Active development |
-> | **Cross-cutting** | `AGENTS.md`, `QUICKCONTEXT.md`, `TODO.md`, `KNOWN_ISSUES.md` | All agents share |
+> | **Cross-cutting** | `AGENTS.md`, `QUICKCONTEXT.md`, `TODO.md` | All agents share |
 
 ### Quality Gates
 > Follow `docs/testing/TEST_MATRIX.md` for the checklist:

@@ -3,8 +3,8 @@
 <!-- FRESHNESS: Update this date every time you modify this file -->
 <!-- freshness: YYYY-MM-DD -->
 
-**30-second orientation for new agent sessions.** Read this first, verify
-claims against `git log --oneline -10`, then proceed to KNOWN_ISSUES.md.
+**30-second orientation for new agent sessions.** Read this after README.md.
+Verify claims against `git log --oneline -10`, then proceed to TODO.md.
 
 ## Project
 
@@ -44,9 +44,9 @@ Progressive-fidelity OOXML document renderer. Monorepo, 8 packages, TypeScript.
 ## What's Blocked
 
 <!-- Anything preventing progress. Include workarounds if they exist.
-     Link to KNOWN_ISSUES.md for details. -->
+     Link to TODO.md "Known Issues" section for details. -->
 
-- [blocker description] — see KNOWN_ISSUES.md "Section Name"
+- [blocker description] — see TODO.md "Known Issues & Blockers"
 
 ## What's Next
 
