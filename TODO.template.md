@@ -47,6 +47,40 @@ code reference sections of this file.
   - Context: race condition when two peers timeout simultaneously
 -->
 
+## Known Issues & Blockers
+
+<!-- Things that PREVENT work or CAUSE CONFUSION. This replaces a separate
+     KNOWN_ISSUES.md — keeping everything in one file reduces drift.
+     Include the fix/workaround, not just the problem. -->
+
+### Active Blockers
+
+<!-- Things blocking work. Include who/what is blocked and workarounds.
+     Remove promptly when resolved (move to Completed). -->
+
+_None currently._
+
+### Gotchas
+
+<!-- Counter-intuitive behaviors, misleading names, undocumented dependencies.
+     Keep until the underlying cause is fixed. -->
+
+<!-- Example:
+- **Playwright HTML reporter blocks in non-interactive mode**
+  Fix: Always use `reporter: [['html', { open: 'never' }], ['list']]`
+-->
+
+### Workarounds In Place
+
+<!-- Temporary fixes in the codebase. MUST link to a task above.
+     Format: what → where → why → remove when -->
+
+<!-- Example:
+- **Blob URL for web workers** — `src/worker-loader.ts:15`
+  Why: CDN serves .mjs with wrong MIME type
+  Remove when: CDN config updated (see P1 task above)
+-->
+
 ## Completed
 
 <!-- Recently completed items. Keep for 1-2 weeks so agents can see what's

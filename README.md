@@ -1,95 +1,99 @@
 # agent-templates
 
-A complete starter kit for agent-driven software development. Drop these
-templates into any project to get a fully wired information environment
-that makes AI coding agents (Claude Code, etc.) dramatically more effective.
+A complete starter kit for contract-driven, agent-powered software development.
 
-## The Problem
+**Start here:** [methodology.md](methodology.md) — the full philosophy.
+Contracts are the operating system. BDD first. Max autonomy within contracts.
+Trust but verify. Everything else implements this.
 
-Agent output quality is bounded by the quality of the context agents receive,
-and context degrades over time unless actively maintained. Most projects give
-agents a README and hope for the best. This repo gives them a structured
-information environment: orientation, norms, task tracking, hazard awareness,
-behavioral contracts, and reusable prompt templates — all designed to prevent
-the failure modes we've observed across thousands of agent-hours of real
-development.
-
-See [learnings-from-opendockit.md](learnings-from-opendockit.md) for the
-full story behind these patterns.
+---
 
 ## What's Included
+
+### The Methodology
+
+| File | Purpose |
+|------|---------|
+| [methodology.md](methodology.md) | **The philosophy.** Contract-driven development, BDD-first, agent autonomy model, anti-drift mechanisms. Read this to understand *why* everything else is structured the way it is. |
 
 ### The Cold Start Quad
 
 Four files every agent reads on session start, in order:
 
-| File | Purpose | Template |
-|------|---------|----------|
-| `QUICKCONTEXT.md` | 30-second orientation — what's true right now | [QUICKCONTEXT.template.md](QUICKCONTEXT.template.md) |
-| `KNOWN_ISSUES.md` | What will bite you — blockers, gotchas, workarounds | [KNOWN_ISSUES.template.md](KNOWN_ISSUES.template.md) |
-| `TODO.md` | What needs doing — tracked tasks with the two-tag system | [TODO.template.md](TODO.template.md) |
-| `AGENTS.md` | How we work — norms, testing cascade, doc maintenance | [AGENTS.template.md](AGENTS.template.md) |
+| Order | Template | Purpose |
+|-------|----------|---------|
+| 1 | [README.template.md](README.template.md) | Universal first-read — project orientation, architecture overview, cold start instructions |
+| 2 | [QUICKCONTEXT.template.md](QUICKCONTEXT.template.md) | What's true right now — branch, test counts, active work, blockers |
+| 3 | [TODO.template.md](TODO.template.md) | Tasks + known issues + blockers (two-tag tracking system) |
+| 4 | [AGENTS.template.md](AGENTS.template.md) | How we work — norms, testing cascade, contracts, agent collaboration |
 
-### Core Configuration
+Plus: [CLAUDE.template.md](CLAUDE.template.md) — Claude Code-specific configuration.
 
-| File | Purpose | Template |
-|------|---------|----------|
-| `CLAUDE.md` | Claude Code project instructions — commands, style, autonomy | [CLAUDE.template.md](CLAUDE.template.md) |
+### The Contract System
+
+| File | Purpose |
+|------|---------|
+| [architecture/README.md](architecture/README.md) | How the contract system works — naming, linking, versioning |
+| [architecture/CONTRACT-TEMPLATE.md](architecture/CONTRACT-TEMPLATE.md) | Annotated template for new contracts |
+| [architecture/CONTRACT-REGISTRY.template.md](architecture/CONTRACT-REGISTRY.template.md) | Index of all contracts |
 
 ### Agent Orchestration
 
-Reusable prompt templates for subagent delegation — both single-invocation
-specialized tasks and parallel fan-out:
+| Directory | Purpose |
+|-----------|---------|
+| [agents/](agents/) | Subagent guidelines, prompt index, and templates |
+| [agents/subagent-prompts/](agents/subagent-prompts/) | UX review, security scan, code review, contract audit, doc drift, feature inventory, test sharding |
 
-| Directory | Contents |
-|-----------|----------|
-| [agents/](agents/) | README, guidelines, index, and prompt templates |
-| [agents/subagent-prompts/](agents/subagent-prompts/) | UX review, security scan, code review, contract audit, doc drift detection, feature inventory, test shard runner |
+### Project Profiles
 
-### Learnings
+Different projects need different subsets. Pick your profile:
 
-| File | Contents |
-|------|----------|
-| [learnings-from-opendockit.md](learnings-from-opendockit.md) | Battle-tested patterns from 5,800+ tests, 9 simultaneous agents, and hard-won failure analysis |
+| Profile | Best For |
+|---------|----------|
+| [web-app](profiles/web-app.md) | SPA, SSR, web frontend + API |
+| [api-service](profiles/api-service.md) | Backend API, microservice |
+| [crypto-library](profiles/crypto-library.md) | Security-critical library |
+| [cli-tool](profiles/cli-tool.md) | Command-line tool |
+
+### Supporting
+
+| Directory | Purpose |
+|-----------|---------|
+| [feedback/](feedback/) | Lightweight feedback mechanism — agents drop suggestions here |
+| [profiles/](profiles/) | Project-type adoption guides |
+| [learnings-from-opendockit.md](learnings-from-opendockit.md) | Battle-tested patterns and failure analysis from 5,800+ tests and 9 simultaneous agents |
 
 ## Quick Start
 
 See [SETUP.md](SETUP.md) for the full adoption guide. The short version:
 
 ```bash
-# 1. Copy templates into your project
-cp QUICKCONTEXT.template.md  /your/project/QUICKCONTEXT.md
-cp KNOWN_ISSUES.template.md  /your/project/KNOWN_ISSUES.md
-cp TODO.template.md          /your/project/TODO.md
-cp AGENTS.template.md        /your/project/AGENTS.md
-cp CLAUDE.template.md        /your/project/CLAUDE.md
+PROJECT=/path/to/your/project
 
-# 2. Copy the agents/ directory for subagent orchestration
-cp -r agents/                /your/project/agents/
+# Core docs
+cp README.template.md       "$PROJECT/README.md"
+cp QUICKCONTEXT.template.md "$PROJECT/QUICKCONTEXT.md"
+cp TODO.template.md         "$PROJECT/TODO.md"
+cp AGENTS.template.md       "$PROJECT/AGENTS.md"
+cp CLAUDE.template.md       "$PROJECT/CLAUDE.md"
+cp methodology.md           "$PROJECT/methodology.md"
 
-# 3. Customize each file (follow the <!-- comments --> in each template)
+# Contract system
+cp -r architecture/         "$PROJECT/architecture/"
 
-# 4. Remove the <!-- comment --> blocks when done
+# Agent orchestration (optional)
+cp -r agents/               "$PROJECT/agents/"
+
+# Customize everything (follow the <!-- comments --> in each template)
 ```
 
 ## Design Philosophy
 
-1. **Layered context** — Agents read orientation first, then norms, then tasks,
-   then hazards. Forcing a reading order prevents agents from diving into code
-   before they understand the project.
+See [methodology.md](methodology.md) for the complete philosophy. In brief:
 
-2. **Trust but verify** — Every status-bearing document has a freshness marker.
-   Agents cross-reference doc claims against git log and the filesystem before
-   trusting them.
-
-3. **Encode corrections as infrastructure** — If you've corrected an agent
-   ("no, not like that"), that correction belongs in a template or guideline,
-   not in your memory. Templates make agents learn across sessions.
-
-4. **Separation of concerns** — QUICKCONTEXT is "what's true now."
-   AGENTS.md is "how we work." TODO.md is "what needs doing."
-   KNOWN_ISSUES.md is "what will bite you." Each has one job.
-
-5. **Anti-drift by design** — Freshness timestamps, two-tag TODO tracking,
-   pre-commit checks, and doc-drift detection templates all fight the #1
-   enemy of agent-driven development: information decay.
+1. **Contracts are the operating system** — don't implement without a contract
+2. **BDD first** — encode who and why before writing contracts
+3. **Max autonomy within contracts** — agents are unrestricted inside contract boundaries
+4. **Trust but verify** — freshness markers, pre-launch audits, filesystem as truth
+5. **Encode corrections as infrastructure** — if you've corrected an agent, put it in a template
+6. **Fast inner loops** — Testing Cascade T0-T5, iterate at the speed of a single test

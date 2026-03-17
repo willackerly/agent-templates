@@ -24,17 +24,19 @@ Project instructions for Claude Code. These override defaults—follow them exac
 ## Cold Start (New Agent?)
 
 **Read in order (5 min total):**
-1. `QUICKCONTEXT.md` → 30-second orientation, current state
-2. `KNOWN_ISSUES.md` → blockers, gotchas, common errors
-3. `TODO.md` → what needs doing
+1. `README.md` → universal orientation (ALWAYS read first, every session)
+2. `QUICKCONTEXT.md` → current state (verify against `git log --oneline -10`)
+3. `TODO.md` → tasks + known issues + blockers
+4. `AGENTS.md` → norms, testing cascade, contracts, collaboration
 
-**Then deep dive:**
-4. `AGENTS.md` → norms, workstreams, doc maintenance policy
-5. `docs/README.md` → full documentation tree
+**Reference:**
+- `methodology.md` → the philosophy (contracts, BDD, autonomy model)
+- `architecture/` → contract documents
+- `agents/` → subagent templates
 
 <!-- Add project-specific deep-dive files here, e.g.:
-6. `docs/current-status/STATUS_YYYY-MM-DD.md` → latest milestone
-7. `docs/specifications/README.md` → contract-first requirements
+5. `docs/README.md` → full documentation tree
+6. `architecture/CONTRACT-REGISTRY.md` → contract index
 -->
 
 ## Commands
@@ -67,6 +69,20 @@ TypeScript strict mode. Prettier defaults (2 spaces, semicolons, single quotes).
 Function components. Name files after primary export.
 Keep changes minimal—don't over-engineer.
 -->
+
+### Contract Linking (MANDATORY)
+
+Every source file must have a header comment declaring which contract it
+implements or belongs to. See `architecture/README.md` for the full system.
+
+```
+// CONTRACT:C1-BLOBSTORE.2.1          — implements this contract directly
+// Architecture: CONTRACT:S2-API.1.0   — belongs to this service (for helpers)
+```
+
+When editing a file: **read its contract first.** When updating a contract:
+**search for all implementing code** (`grep -rn "CONTRACT:{id}"`).
+See `methodology.md` for the full philosophy.
 
 ## Testing
 

@@ -4,6 +4,37 @@
 
 ---
 
+## Implementation Status
+
+The actionable patterns from this document have been implemented in the
+agent-templates kit. This table maps each lesson to where it lives now:
+
+| Learning | Implemented In |
+|----------|---------------|
+| Cold Start Quad | `README.template.md`, `QUICKCONTEXT.template.md`, `TODO.template.md`, `AGENTS.template.md` |
+| Testing Cascade (T0-T5) | `AGENTS.template.md` §Testing Cascade |
+| Worktree Isolation | `AGENTS.template.md` §Agent Collaboration Patterns |
+| Central Contracts / IR Types | `architecture/`, `methodology.md` §1-3 |
+| TODO Two-Tag System | `AGENTS.template.md` §TODO Tracking, `TODO.template.md` |
+| Fan-Out Patterns | `AGENTS.template.md` §Subagent Prompt Templates, `agents/` |
+| Doc Drift | `agents/subagent-prompts/doc-drift-detector.md` |
+| W6 / Feature Inventory | `agents/subagent-prompts/feature-inventory.md`, `AGENTS.template.md` §Feature Inventory Protocol |
+| Contract-First Gaps | `architecture/` contract system, `methodology.md` §2-3 |
+| Pre-Launch Audit | `AGENTS.template.md` §Pre-Launch Audit |
+| Feature Inventories | `agents/subagent-prompts/feature-inventory.md` |
+| Freshness Timestamps | All template files (freshness markers) |
+| Cherry-Pick Resolution | `AGENTS.template.md` §Cherry-Pick Conflict Resolution |
+| Trust-but-Verify | `AGENTS.template.md` §Post-Merge Integration, `methodology.md` §4 |
+| Subagent Templates | `agents/`, `methodology.md` §6 |
+| Visual Inspection / SBS | Project-specific (rendering), general principle in `methodology.md` |
+| Branded Types | Project-specific (TypeScript), not templated |
+| Metrics Bundle | Project-specific (font data), not templated |
+
+This document remains as reference material — the "why" behind each pattern,
+the war stories, and the failure analysis that motivated the templates.
+
+---
+
 ## 1. Executive Summary
 
 The central lesson from building OpenDocKit with AI agents is this: **the quality of agent output is bounded by the quality of the context agents receive, and context degrades over time unless actively maintained.** We built excellent cold-start documentation (QUICKCONTEXT.md, AGENTS.md, TODO.md, KNOWN_ISSUES.md), powerful parallelization patterns (9 simultaneous worktree agents completing major work in hours), and rigorous tracking systems (the TODO/TRACKED-TASK two-tag methodology). All of these worked well in the moment they were created. But documentation drifts from reality at the speed of code changes, and agents both suffer from and contribute to that drift. The fundamental challenge of agent-driven development is not making agents productive — it is preventing the information environment they depend on from decaying.

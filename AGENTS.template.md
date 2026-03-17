@@ -2,20 +2,20 @@
 
 ## Read Before Coding
 
-**Quick start (new agent):**
-1. `QUICKCONTEXT.md` → 30-second orientation, current state of the world
-2. `KNOWN_ISSUES.md` → active blockers, gotchas, common errors
-3. `TODO.md` → consolidated task tracking
+**The Cold Start Quad (every session, every agent, no exceptions):**
+1. `README.md` → universal orientation (ALWAYS first)
+2. `QUICKCONTEXT.md` → current state (verify against `git log --oneline -10`)
+3. `TODO.md` → tasks + known issues + blockers
+4. `AGENTS.md` (this file) → norms, contracts, collaboration
 
-**Full context:**
-4. `README.md` → repo purpose + quick start
-5. `AGENTS.md` (this file) → norms
-6. `docs/README.md` → documentation tree
+**Reference (read as needed):**
+- `methodology.md` → the philosophy (contracts are the operating system)
+- `architecture/CONTRACT-REGISTRY.md` → contract index
+- `agents/subagent-prompts-index.md` → available subagent templates
 
 <!-- Add project-specific context files here, e.g.:
-7. `docs/current-status/STATUS_YYYY-MM-DD.md` + `ROADMAP.md` → active priorities
-8. `docs/specifications/README.md` → contract-first requirements
-9. `packages/README.md` → package-level READMEs
+5. `docs/README.md` → full documentation tree
+6. `architecture/CONTRACT-REGISTRY.md` → all contracts
 -->
 
 ## Core Tenets
@@ -279,13 +279,25 @@ beside code or inside `__tests__`. E2E specs should be tagged
 updated when coverage changes >=2 pts.
 -->
 
-### Contract-First Policy
+### Contract-Driven Development
 
-<!-- If your project uses contract-first development:
-- Specs reside in `docs/specifications/` (OpenAPI, data formats, contract testing plan).
-- Update the spec before changing code.
-- Every interface change must include: spec diff, contract tests, and pointers in the PR description.
--->
+**Contracts are the operating system.** See `methodology.md` for the full
+philosophy and `architecture/README.md` for the naming/linking system.
+
+**The rules:**
+1. **Don't implement without a contract.** Write the contract first.
+2. **Don't modify code without checking its contract.** Read the `CONTRACT:`
+   header comment, then read the contract document.
+3. **Don't update a contract without searching implementations.**
+   `grep -rn "CONTRACT:{id}" src/ internal/` finds all implementing code.
+4. **Contract changes that break interfaces → plan mode.**
+
+**Every source file** has a header declaring its contract:
+```
+// CONTRACT:C1-BLOBSTORE.2.1
+```
+
+**Contract tests are king.** If a contract test fails, nothing ships.
 
 ### Documentation Maintenance Policy
 
