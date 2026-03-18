@@ -94,6 +94,13 @@ Different projects need different subsets. Pick your profile:
 | [scripts/pre-commit.sh](scripts/pre-commit.sh) | Git pre-commit hook (fast checks only) |
 | [.github/pull_request_template.md](.github/pull_request_template.md) | PR template with contract checklist |
 
+### Agent Runtime (Proposed)
+
+| File | Purpose |
+|------|---------|
+| [AGENT-RUNTIME.md](AGENT-RUNTIME.md) | Proposal: turn contract-driven docs into contract-driven multi-agent execution. Agents as long-lived processes with scoped memory, filesystem boundaries, and a query interface. |
+| [ASK-SHELL.md](ASK-SHELL.md) | Proposal: Unix-like shell for agent interaction. `ask` is to agents what `grep` is to code. |
+
 ### Supporting
 
 | Directory | Purpose |
