@@ -13,6 +13,7 @@
 #   SKIP_FRESHNESS=1         — skip freshness check
 #   SKIP_REGISTRY=1          — skip registry consistency check
 #   SKIP_GROUND_TRUTH=1     — skip ground truth metric verification
+#   SKIP_STEWARD=1          — skip steward health scan
 #
 # Exit code: 0 = all pass, 1 = failures in strict mode
 
@@ -65,6 +66,7 @@ run_check "TODO Tracking"       SKIP_TODOS            "$SCRIPT_DIR/check-todos.s
 run_check "Doc Freshness"       SKIP_FRESHNESS        "$SCRIPT_DIR/check-freshness.sh"
 run_check "Registry Consistency" SKIP_REGISTRY         "$SCRIPT_DIR/check-registry.sh"
 run_check "Ground Truth"        SKIP_GROUND_TRUTH     "$SCRIPT_DIR/check-ground-truth.sh"
+run_check "Steward"             SKIP_STEWARD          "$SCRIPT_DIR/steward.sh"
 
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
