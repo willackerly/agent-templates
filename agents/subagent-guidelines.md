@@ -98,3 +98,37 @@ proceed**. Document the finding in `agents/findings/<date>-<short-title>.md`:
 - Do not retry indefinitely. Three attempts max, then document the failure.
 - Include error messages and stack traces in your results — they help the
   orchestrator diagnose issues.
+
+## Level of Effort (LOE)
+
+Each template declares a recommended LOE level. The orchestrating agent uses
+this to select the right model and effort level for invocation.
+
+| LOE | Model | Claude Code Flag | Typical Duration |
+|-----|-------|-----------------|-----------------|
+| **Max** | `opus` | `--model opus` | 2-10 min |
+| **High** | `opus` or `sonnet` | `--model opus` (preferred) | 1-5 min |
+| **Medium** | `sonnet` | `--model sonnet` | 30s-2 min |
+| **Low** | `haiku` or local | `--model haiku` | 5-30s |
+
+### Invoking with LOE
+
+When the orchestrating agent delegates, it should match the model to the LOE:
+
+```
+# Max LOE — use opus for deep reasoning
+Agent(prompt: "...", model: "opus")
+
+# Medium LOE — sonnet is sufficient
+Agent(prompt: "...", model: "sonnet")
+
+# Low LOE — haiku or local model for simple tasks
+Agent(prompt: "...", model: "haiku")
+```
+
+### When to Override
+
+The template LOE is a default. Override when:
+- The codebase is unusually large/complex → bump up
+- The task scope is narrow (single file) → bump down
+- Time pressure requires faster results → bump down with tradeoff noted

@@ -20,6 +20,7 @@ agents/
     doc-drift-detector.md      # doc-vs-code consistency
     feature-inventory.md       # behavioral inventory for safe refactoring
     test-shard-runner.md       # parallel test execution
+    merge-coordinator.md       # post-worktree merge coordination
   architect/                   # Architect agent
     AGENT.md                   #   role definition
     commands/                  #   audit, default
@@ -32,6 +33,9 @@ agents/
   steward/                     # Steward agent (quality scanner)
     AGENT.md
     commands/                  #   scan, json, summary, check, default
+  merger/                      # Merger agent (branch integration)
+    AGENT.md
+    commands/                  #   default, report
   findings/                    # architectural findings from subagents
   results/                     # subagent output files
 ```
@@ -53,6 +57,33 @@ To add a command: create `agents/<role>/commands/<name>.sh`, make it
 executable. It's immediately available as `ask <role> <name>`. The second
 line of the script (after the shebang) is used as the description in help
 output — start it with `# `.
+
+## Actor Agents
+
+Most agents are **readers** — they answer questions about the project
+(architect, product, steward). Some agents are **actors** — they perform
+actions on the repository.
+
+| Agent | Type | What It Does |
+|-------|------|-------------|
+| architect | Reader | Answers architecture questions, audits contracts |
+| product | Reader | Answers product questions, finds gaps |
+| englead | Reader + Actor | Answers questions, runs enforcement checks |
+| steward | Reader | Scans quality, produces reports |
+| merger | Actor | Merges branches, resolves conflicts, produces reports |
+
+Actor agents are invoked the same way as readers, but they modify state:
+
+```bash
+# Reader: answers a question
+ask architect "what contracts are in DRAFT?"
+
+# Actor: performs an action
+ask merger "merge worktree-agent-abc worktree-agent-def onto main"
+
+# Actor: performs action, then answer follow-up
+ask merger "what conflicts did you resolve?"
+```
 
 ## Subagent Templates
 
