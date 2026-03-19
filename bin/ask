@@ -202,6 +202,8 @@ Usage:
   ask <agent> "<question>"     Send a question, get a concise answer
   ask -v <agent> "<question>"  Verbose: answer + rationale + refs
   ask project:agent "question" Query an agent in another project
+  ask <agent>                    Run agent's default command (if configured)
+  ask <agent> <command> [args]   Run a named agent command
   ask up <agent>               Bring an agent online
   ask who                      List available agents
   ask status <agent>           Check agent health
@@ -1000,6 +1002,39 @@ _check_context_limit() {
   fi
 }
 
+_list_agent_commands() {
+  # Show available commands for an agent (if any)
+  local agent="$1"
+  local cmd_dir="$AGENTS_DIR/$agent/commands"
+  if [ ! -d "$cmd_dir" ]; then
+    return
+  fi
+  local has_cmds=false
+  for f in "$cmd_dir"/*.sh; do
+    [ -f "$f" ] || continue
+    has_cmds=true
+    break
+  done
+  if [ "$has_cmds" = true ]; then
+    echo "" >&2
+    echo "Available commands for $agent:" >&2
+    for f in "$cmd_dir"/*.sh; do
+      [ -f "$f" ] || continue
+      local cmdname
+      cmdname=$(basename "$f" .sh)
+      [ "$cmdname" = "default" ] && continue
+      # Read the second line of the script for a description
+      local desc
+      desc=$(sed -n '2s/^# *//p' "$f" 2>/dev/null || true)
+      if [ -n "$desc" ]; then
+        printf "  ask %-10s %-12s — %s\n" "$agent" "$cmdname" "$desc" >&2
+      else
+        echo "  ask $agent $cmdname" >&2
+      fi
+    done
+  fi
+}
+
 _ensure_gitignore() {
   # Add runtime artifacts to .gitignore if not already present
   local gitignore=".gitignore"
@@ -1105,25 +1140,48 @@ case "$CMD" in
     exit 0
     ;;
   *)
-    # Default: ask a question
-    # ask <agent> "question"  OR  ask project:agent "question"
+    # Default: ask a question or run an agent command
+    #   ask <agent> "question"        — quoted/multi-word → question
+    #   ask <agent> <command> [args]  — unquoted word matching commands/ → command
+    #   ask <agent>                   — no args → default command (if exists)
     resolve_project_agent "$CMD"
     AGENT="$_RESOLVED_AGENT"
-    QUESTION="${2:-}"
+    AGENT_DIR="$AGENTS_DIR/$AGENT"
 
-    if [ -z "$QUESTION" ]; then
-      # Maybe piped input?
+    require_agent_exists "$AGENT"
+
+    CMD_WORD="${2:-}"
+
+    # --- No args: run default command if available ---
+    if [ -z "$CMD_WORD" ]; then
+      if [ -x "$AGENT_DIR/commands/default.sh" ]; then
+        "$AGENT_DIR/commands/default.sh"
+        exit $?
+      fi
+      # No default command — check piped input
       if [ ! -t 0 ]; then
-        QUESTION=$(cat)
+        CMD_WORD=$(cat)
+      fi
+      if [ -z "$CMD_WORD" ]; then
+        echo "ask: error: question or command required" >&2
+        echo "" >&2
+        echo "Usage:" >&2
+        echo "  ask $AGENT \"<question>\"     — ask a question" >&2
+        echo "  ask $AGENT <command>          — run a command" >&2
+        _list_agent_commands "$AGENT"
+        exit 4
       fi
     fi
 
-    if [ -z "$QUESTION" ]; then
-      echo "ask: error: question required" >&2
-      echo "Usage: ask <agent> \"<question>\"" >&2
-      exit 4
+    # --- Check if CMD_WORD matches a command script ---
+    if [ -x "$AGENT_DIR/commands/$CMD_WORD.sh" ]; then
+      shift 2  # remove agent name and command word
+      "$AGENT_DIR/commands/$CMD_WORD.sh" "$@"
+      exit $?
     fi
 
+    # --- Fall through: treat as a question ---
+    QUESTION="$CMD_WORD"
     cmd_ask "$AGENT" "$QUESTION"
     ;;
 esac
