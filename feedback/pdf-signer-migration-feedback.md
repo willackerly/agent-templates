@@ -1,4 +1,4 @@
-# Feedback: Migrating an Existing Production Project to agent-templates
+# Feedback: Migrating an Existing Production Project to rebar
 
 **Source project:** Dapple SafeSign (pdf-signer-web) — local-first, zero-knowledge PDF signing with biometric identity binding
 **Project type:** Web app monorepo (React/Vite client, Express API, 6 packages, shared types/utils)

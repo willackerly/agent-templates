@@ -7,7 +7,7 @@
 ## Implementation Status
 
 The actionable patterns from this document have been implemented in the
-agent-templates kit. This table maps each lesson to where it lives now:
+rebar kit. This table maps each lesson to where it lives now:
 
 | Learning | Implemented In |
 |----------|---------------|
@@ -474,7 +474,7 @@ A `subagent-guidelines.md` file defines rules all subagents follow:
 
 This prevents the inconsistency problem: without shared guidelines, each subagent makes its own decisions about commit conventions, test running, scope boundaries. With them, every agent behaves predictably.
 
-### Template Recommendations for agent-templates
+### Template Recommendations for rebar
 
 **Add to AGENTS.template.md:**
 - A "Subagent Prompt Templates" section under fan-out patterns

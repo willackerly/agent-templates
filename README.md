@@ -1,6 +1,8 @@
-# agent-templates
+# rebar
 
-A complete system for contract-driven, agent-powered software development.
+Steel reinforcement for agent-powered software development. Contracts are the
+rebar — invisible in the running code, but they're what keeps the architecture
+from collapsing.
 
 This is not a framework you install. It's a set of files you copy into your
 project that give AI agents (and humans) the structure they need to build
@@ -517,7 +519,7 @@ See [SETUP.md](SETUP.md) for the detailed guide with customization steps.
 ## Project Structure
 
 ```
-agent-templates/
+rebar/
 │
 ├── methodology.md                  # The philosophy — read this first
 ├── conventions.md                  # Branch naming, commits, file headers, reviews
@@ -717,14 +719,14 @@ project spans multiple types, combine the relevant parts.
 ### Purlin
 
 [Purlin](https://github.com/purlin) is a spec-driven development framework
-that influenced several concepts in agent-templates.
+that influenced several concepts in rebar.
 
 **Where we align:** specs before code, contract lifecycle, quality gates,
 companion docs, discovery taxonomy.
 
 **Where we diverge:**
 
-| Aspect | Purlin | agent-templates | Why |
+| Aspect | Purlin | rebar | Why |
 |--------|--------|-----------------|-----|
 | Role rigidity | Fixed hierarchy, formal handoffs | Fluid roles | Small teams wear multiple hats |
 | Scenarios | Gherkin-only, required | Gherkin optional | Infrastructure contracts don't benefit from Given/When/Then |

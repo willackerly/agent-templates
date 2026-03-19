@@ -1,6 +1,6 @@
 # Project Profiles
 
-Different projects need different subsets of the agent-templates kit.
+Different projects need different subsets of the rebar kit.
 These profiles tell you what to adopt and what to skip.
 
 ## How to Use

@@ -2,7 +2,7 @@
 
 ## Status: Proposal (Phased Adoption)
 
-This document proposes a lightweight runtime layer for the agent-templates
+This document proposes a lightweight runtime layer for the rebar
 methodology.
 
 It is intentionally:

@@ -1,6 +1,6 @@
 # Setup Guide
 
-How to adopt the agent-templates kit in your project.
+How to adopt the rebar kit in your project.
 
 **Start by reading [methodology.md](methodology.md)** to understand the
 philosophy. Then pick your [project profile](profiles/) to know which
@@ -26,7 +26,7 @@ Your profile tells you which files to copy and which sections to customize.
 ## Step 2: Copy the Core Files
 
 ```bash
-# From the agent-templates directory:
+# From the rebar directory:
 PROJECT=/path/to/your/project
 
 # The Cold Start Quad (required)
@@ -166,11 +166,11 @@ grep -q 'echo "' scripts/check-ground-truth.sh && echo "Ground truth: metrics de
 ```bash
 git add README.md QUICKCONTEXT.md TODO.md AGENTS.md CLAUDE.md methodology.md
 git add architecture/ agents/
-git commit -m "docs: adopt contract-driven agent-templates
+git commit -m "docs: adopt contract-driven rebar methodology
 
 Add Cold Start Quad (README, QUICKCONTEXT, TODO, AGENTS), Claude Code
 config, methodology, contract system, and agent orchestration templates.
-See: https://github.com/willackerly/agent-templates"
+See: https://github.com/willackerly/rebar"
 ```
 
 ## Ongoing Maintenance

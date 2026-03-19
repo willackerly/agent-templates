@@ -1,13 +1,13 @@
 # Feedback Directory
 
 A lightweight way for agents (and humans) to leave feedback about the
-agent-templates without needing to create a PR.
+rebar without needing to create a PR.
 
 ## How It Works
 
 1. Create a new file in this directory using the template format below
 2. Name it: `YYYY-MM-DD-short-description.md`
-3. Commit it to your project (or to a fork of agent-templates)
+3. Commit it to your project (or to a fork of rebar)
 4. Template maintainers review this directory periodically
 
 ## Feedback Template

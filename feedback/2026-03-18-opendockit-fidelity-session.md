@@ -1,7 +1,7 @@
 # Feedback: OpenDocKit Fidelity Blitz — Context Pollution, Skill Gaps, and Architectural Recommendations
 
 **Date:** 2026-03-18
-**Source:** Full agent-templates methodology, ASK-SHELL.md, AGENT-RUNTIME.md, methodology.md
+**Source:** Full rebar methodology, ASK-SHELL.md, AGENT-RUNTIME.md, methodology.md
 **Type:** improvement | missing-feature
 **From:** Claude Code agent session on OpenDocKit (20 commits, 6,042 tests, 15+ hours of continuous work)
 
@@ -16,7 +16,7 @@ This was a marathon session on OpenDocKit — a client-side OOXML document rende
 - Discovery of a fundamental debugging principle (PDF DOM as oracle for OOXML fidelity)
 - Significant context pollution from merge conflict resolution
 
-The session stress-tested nearly every aspect of the agent-templates methodology: fan-out patterns, worktree isolation, pre-launch audits, visual inspection over metrics, subagent prompt design, and post-merge integration. This feedback captures what worked, what didn't, and concrete recommendations for the templates, ASK CLI, and skill system.
+The session stress-tested nearly every aspect of the rebar methodology: fan-out patterns, worktree isolation, pre-launch audits, visual inspection over metrics, subagent prompt design, and post-merge integration. This feedback captures what worked, what didn't, and concrete recommendations for the templates, ASK CLI, and skill system.
 
 ---
 

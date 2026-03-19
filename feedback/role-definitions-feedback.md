@@ -8,7 +8,7 @@
 
 ## The Gap
 
-The agent-templates repo has `agents/product/AGENT.md` and `agents/architect/AGENT.md` as 12-line skeletons. Two of the four roles in the hierarchy (`englead` and `engineer`) don't exist at all. For the ASK CLI to power role-based reasoning, each role needs a **substantive** definition — not a stub.
+The rebar repo has `agents/product/AGENT.md` and `agents/architect/AGENT.md` as 12-line skeletons. Two of the four roles in the hierarchy (`englead` and `engineer`) don't exist at all. For the ASK CLI to power role-based reasoning, each role needs a **substantive** definition — not a stub.
 
 We built full role files for SafeSign (50-150 lines each). This feedback captures what we learned about what makes a role definition useful vs decorative, and proposes changes to the templates.
 
@@ -185,7 +185,7 @@ Without rich role definitions, every `ask` goes to the same generic context, and
 
 ---
 
-## Summary: Changes Needed in agent-templates
+## Summary: Changes Needed in rebar
 
 | File | Current State | Action |
 |------|--------------|--------|
