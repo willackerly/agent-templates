@@ -514,6 +514,37 @@ cd "$PROJECT" && bin/ask init
 
 See [SETUP.md](SETUP.md) for the detailed guide with customization steps.
 
+### Badges
+
+Add a badge to your README to show rebar adoption status:
+
+```markdown
+<!-- Pick the level that matches your adoption -->
+
+<!-- Adopted: Cold Start Quad + agents + enforcement scripts -->
+[![rebar](https://img.shields.io/badge/rebar-adopted-blue?style=flat)](https://github.com/willackerly/agent-templates)
+
+<!-- Enforced: CONTRACT: headers + steward passing + METRICS verified -->
+[![rebar](https://img.shields.io/badge/rebar-enforced-brightgreen?style=flat)](https://github.com/willackerly/agent-templates)
+
+<!-- Partial: some components adopted (specify which) -->
+[![rebar](https://img.shields.io/badge/rebar-partial-yellow?style=flat)](https://github.com/willackerly/agent-templates)
+```
+
+Optional companion badges:
+
+```markdown
+[![ASK agents](https://img.shields.io/badge/ASK_agents-5-brightgreen?style=flat)](#)
+[![contracts](https://img.shields.io/badge/contracts-12-blue?style=flat)](#)
+[![METRICS](https://img.shields.io/badge/METRICS-verified-brightgreen?style=flat)](#)
+```
+
+| Level | Criteria |
+|-------|----------|
+| **partial** | Some rebar components adopted (e.g., Cold Start Quad only) |
+| **adopted** | Cold Start Quad + `agents/` roles + enforcement scripts + METRICS |
+| **enforced** | All of "adopted" + `CONTRACT:` headers in source + steward passing + CI integration |
+
 ---
 
 ## Project Structure
