@@ -36,6 +36,7 @@ for contract in "$ARCH_DIR"/CONTRACT-*.md; do
   [ "$contract" = "$ARCH_DIR/CONTRACT-TEMPLATE.md" ] && continue
   [ "$contract" = "$ARCH_DIR/CONTRACT-REGISTRY.md" ] && continue
   [ "$contract" = "${ARCH_DIR}/CONTRACT-REGISTRY.template.md" ] && continue
+  [ "$contract" = "$ARCH_DIR/CONTRACT-GAPS.md" ] && continue
   [ ! -f "$contract" ] && continue
 
   basename=$(basename "$contract")
@@ -54,6 +55,7 @@ for contract in "$ARCH_DIR"/CONTRACT-*.md; do
   [ "$contract" = "$ARCH_DIR/CONTRACT-TEMPLATE.md" ] && continue
   [ "$contract" = "$ARCH_DIR/CONTRACT-REGISTRY.md" ] && continue
   [ "$contract" = "${ARCH_DIR}/CONTRACT-REGISTRY.template.md" ] && continue
+  [ "$contract" = "$ARCH_DIR/CONTRACT-GAPS.md" ] && continue
   [ ! -f "$contract" ] && continue
 
   # Extract contract ID from filename (e.g., CONTRACT-C1-BLOBSTORE.2.1.md → C1-BLOBSTORE.2.1)
@@ -61,8 +63,8 @@ for contract in "$ARCH_DIR"/CONTRACT-*.md; do
 
   # Search for references in source code
   ref_count=$(grep -rn "CONTRACT:${id}" \
-    --include="*.go" --include="*.ts" --include="*.tsx" --include="*.js" \
-    --include="*.py" --include="*.rs" --include="*.jsx" \
+    --include="*.go" --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" \
+    --include="*.py" --include="*.rs" --include="*.mjs" --include="*.cjs" \
     . 2>/dev/null \
     | grep -v "node_modules\|vendor\|dist\|\.git\|architecture/" \
     | wc -l | tr -d ' ')

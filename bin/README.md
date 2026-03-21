@@ -23,6 +23,7 @@ See the [root README](../README.md) for how ASK fits into the overall system.
 # Ask an agent a question
 ./bin/ask architect "What contract governs authentication?"
 ./bin/ask -v architect "Why was RSA chosen?"   # verbose mode
+./bin/ask -w tester "Add unit tests for the auth module"  # write mode
 
 # Run a specific command
 ./bin/ask steward summary   # one-line health check
@@ -46,6 +47,7 @@ ln -s "$(pwd)/bin/ask" /usr/local/bin/ask
 | Command | Description |
 |---------|-------------|
 | `ask <agent> "<question>"` | Ask a question (natural language) |
+| `ask -w <agent> "<question>"` | Ask with write access (agent can edit files) |
 | `ask <agent>` | Run default command (if configured) |
 | `ask <agent> <command> [args]` | Run a named command |
 
@@ -54,6 +56,7 @@ ln -s "$(pwd)/bin/ask" /usr/local/bin/ask
 | Command | Description |
 |---------|-------------|
 | `ask who` | List available agents |
+| `ask watch <agent>` | Follow agent's incremental progress |
 | `ask init` | Initialize directory structure + create agents |
 | `ask where <agent>` | Show agent directory path |
 | `ask status <agent>` | Check if running, inbox depth |
@@ -102,6 +105,50 @@ REPO_ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 It's immediately available as `ask <role> <name>`. The comment on line 2 is
 used as help text.
 
+## Write Mode (`-w`)
+
+By default, agents are read-only — they answer questions using Read, Grep,
+and Glob. With `-w`, the agent gets Edit, Write, and Bash access and can
+modify the repo directly.
+
+```bash
+# Agent can read and write
+ask -w tester "Add missing tests for the auth module"
+ask -w englead "Fix the broken import in src/utils.ts"
+ask -w architect "Create a new contract for the billing service"
+```
+
+Write mode also enables **incremental progress streaming**. While the agent
+works, it writes each tool call to `agents/<role>/.progress` so you can
+watch in real time:
+
+```bash
+# Terminal 1: start the work
+ask -w tester "Add tests for the auth module"
+
+# Terminal 2: watch progress as it happens
+ask watch tester
+```
+
+The progress file shows each step as it happens:
+
+```
+# ask tester — 2026-03-21T14:22:11Z
+# Q: Add tests for the auth module
+# status: running
+---
+[1] Read src/auth/login.ts
+[2] Glob **/*.test.ts
+[3] Read src/auth/__tests__/login.test.ts
+  ... Analyzing existing test coverage...
+[4] Edit src/auth/__tests__/login.test.ts
+[5] Bash npx vitest run src/auth/__tests__/login.test.ts
+---
+# status: done — 2026-03-21T14:23:45Z
+```
+
+Combine flags: `ask -w -v tester "question"` for write mode + verbose output.
+
 ## Session Persistence
 
 Agents maintain sessions across questions. The first question sends full
@@ -126,6 +173,7 @@ Manual reset: `ask reset <agent>`.
 | `ASK_MODEL` | `sonnet` | Claude model |
 | `ASK_CONTEXT_LIMIT` | `70` | Auto-reset session at this context % |
 | `ASK_VERBOSE` | `0` | Debug output on stderr |
+| `ASK_WRITE` | `0` | Enable write mode by default |
 
 ## Exit Codes
 
@@ -160,6 +208,7 @@ agents/<role>/
   inbox/                # Incoming messages (inbox/outbox mode)
   outbox/               # Outgoing responses
   .session-id           # Current session ID (auto-managed)
+  .progress             # Incremental progress (write mode, auto-managed)
 ```
 
 ## Known Limitations (v0)

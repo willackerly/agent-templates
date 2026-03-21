@@ -140,6 +140,23 @@ interface:
 package httputil
 ```
 
+### Tier Classification Guidance
+
+**When in doubt, Tier 2 under the parent service.** If you're unsure
+whether a file deserves its own Tier 1 contract or should be Tier 2
+under an existing service, default to Tier 2. Track the judgment call
+in `CONTRACT-GAPS.md` for later review. Promoting from Tier 2 to
+Tier 1 later is cheap; premature Tier 1 contracts create maintenance
+overhead.
+
+**Non-standard file locations:** Enforcement scripts search common
+source extensions (`.ts`, `.tsx`, `.go`, `.py`, `.rs`, `.js`, `.jsx`,
+`.mjs`, `.cjs`) but only in standard project directories. Files in
+`reference-implementations/`, `examples/`, or other non-standard
+locations may not be found by orphan detection. If you have contract
+implementations in unusual directories, add those paths to the search
+scope in `scripts/check-registry.sh`.
+
 ### Multiple Contracts
 
 Rare, but some files bridge two contracts:
@@ -151,6 +168,13 @@ Rare, but some files bridge two contracts:
 // CONTRACT:C2-RELAY.1.0
 package bridge
 ```
+
+**Dual-tag enforcement:** A file tagged with two contracts will satisfy
+orphan detection for both. However, enforcement scripts count each file
+once per contract reference — a dual-tagged file is counted as one
+implementing file for each contract, which is correct. If a file
+"belongs to" a service (Tier 2) AND "implements" a protocol (Tier 1),
+use both tags.
 
 ## Contract Review Checklist
 

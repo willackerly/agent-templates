@@ -1,14 +1,24 @@
 # rebar
 
-Your AI agent just refactored a function that 12 other files depend on.
-The tests pass. The types check. But the function's behavior now violates
-an architectural decision you made last month — and nobody notices until
-another agent builds on the broken assumption three sessions later.
+**The coordination layer for AI agent swarms.**
 
-**Rebar prevents this.** 30 minutes to set up. Zero infrastructure. Everything
-is plain text — bash, markdown, grep, jq. No framework to install. Copy files
-into your project, and your agents immediately understand what they can and
-can't change.
+You don't have one agent — you have ten, across three repos, running in
+parallel worktrees, and half of them just discovered the same bug from
+different angles. One crashed mid-flight. Another modified a file the
+third one depends on. Nobody noticed until the cherry-picks conflicted.
+
+Rebar solves this. It's the shared substrate that lets agents coordinate
+across every dimension that matters:
+
+- **Cross-agent** — 10 agents, same codebase, zero merge conflicts
+- **Cross-repo** — learnings in one repo propagate to siblings
+- **Cross-role** — architect, tester, product, eng lead see different facets, share findings
+- **Cross-session** — today's agent learns what yesterday's agent discovered
+- **Cross-failure** — when an agent fails, the failure mode becomes swarm knowledge
+
+30 minutes to set up. Zero infrastructure. Everything is plain text — bash,
+markdown, grep, jq. No framework to install. Copy files into your project,
+and your agents immediately coordinate.
 
 ---
 
@@ -87,30 +97,40 @@ $ ask product "does offline sync need a new contract?"
 
 ## The Core Idea
 
+Rebar is a **swarm coordination framework** built on three layers:
+
+### Layer 1: Contracts (shared truth)
+
 A **contract** is a versioned markdown document that defines what a component
 does, who it serves, why it exists, and how it interfaces with other
-components. Contracts live in `architecture/`.
+components. Contracts live in `architecture/` and are doubly-linked to code
+via `CONTRACT:` headers — `grep` gets you from code to spec or spec to code.
 
-What makes contracts different from docs:
+Contracts are the operating system of the swarm. They're what make it safe
+for 10 agents to work the same codebase in parallel — each agent knows what
+it can and can't change by reading the contracts, not by asking you.
 
-1. **Doubly-linked to code.** Code references contracts (`CONTRACT:` headers).
-   Contracts list their implementing files. Go from code to spec or spec to
-   code with a single `grep`.
+### Layer 2: Coordination (shared work)
 
-2. **Versioned.** Breaking changes bump the major version. `grep` finds every
-   file that needs updating.
+When agents run in parallel, they need more than contracts — they need
+protocols that prevent collisions and survive failures:
 
-3. **Behavioral.** They specify edge cases, error conditions, and guarantees —
-   not just function signatures. These are what tests verify.
+- **Worktree isolation** — every coding agent gets its own working copy
+- **Commit-per-chunk** — uncommitted work is lost work (login expires, agent crashes)
+- **Shared progress tracking** — the parent knows what each agent accomplished without reading transcripts
+- **Kill-before-spin** — always clean up stale processes before starting new ones
+- **Post-fanout merge** — cherry-pick one agent at a time, test between each
 
-4. **Computed lifecycle.** The Steward derives status (DRAFT → ACTIVE →
-   TESTING → VERIFIED) from what exists in the codebase. No manual tracking.
+### Layer 3: Collective learning (shared knowledge)
 
-5. **Unit of autonomy.** Agents have full authority within existing contracts.
-   Creating or breaking a contract requires discussion. This makes autonomy
-   safe — fast within boundaries, forced pause when boundaries change.
+The swarm gets smarter over time. What one agent discovers, all agents benefit from:
 
-**The four rules:**
+- **Persistent agent sessions** (ASK CLI) — 10 questions cost 1x context, not 10x
+- **Cross-session memory** — today's agent learns what yesterday's discovered
+- **Role-based expertise** — architect, product, tester each accumulate domain knowledge
+- **Failure pattern library** — every crash, conflict, and regression becomes a mitigation for the next run
+
+**The four contract rules** (the foundation everything else builds on):
 
 1. Don't implement without a contract
 2. Don't modify code without checking its contract
@@ -189,14 +209,16 @@ Scripts automatically skip checks above your tier.
 
 ## Real-World Results
 
-Rebar has been adopted by four production projects. Measured results:
+Rebar has been battle-tested across 100+ worktree agent launches in four production projects:
 
-| Project | What Happened |
-|---------|--------------|
-| **Dapple SafeSign** | 17 contracts, 169 headers stamped across 168 files, 18 worktree agents, **0 merge conflicts**, 3 hours wall clock |
-| **blindpipe** | Crypto-critical ZK suite. Selective adoption (kept existing docs, added enforcement). ASK sessions save **10x context** vs ephemeral subagents |
-| **OpenDocKit** | 5,824 tests, 9 simultaneous agents, progressive-fidelity OOXML renderer. Source of the Cold Start Quad and testing cascade patterns |
-| **Office 180** | Multi-repo product suite. Drove cross-repo namespacing (`CONTRACT:blindpipe/C1-BLOBSTORE.2.1`) and AI-native contract frontmatter |
+| Project | Swarm Scale | What Happened |
+|---------|------------|--------------|
+| **Dapple SafeSign** | 18 agents, 3 phases | 17 contracts, 169 headers, **0 merge conflicts**, 3 hours wall clock |
+| **blindpipe** | Selective adoption | Crypto-critical ZK suite. ASK sessions save **10x context** vs ephemeral subagents |
+| **OpenDocKit** | 9 simultaneous agents | 5,824 tests, progressive-fidelity OOXML renderer. Proved the 6-rule agent protocol and recovery patterns |
+| **Office 180** | Multi-repo swarm | Cross-repo namespacing (`CONTRACT:blindpipe/C1-BLOBSTORE.2.1`), AI-native contract frontmatter |
+
+**Key metric from OpenDocKit:** 100% of committed agent work was recoverable after login expiration incidents. Uncommitted work was the only true loss — which the commit-per-chunk protocol minimizes.
 
 See [feedback/](feedback/) for detailed adoption reports.
 

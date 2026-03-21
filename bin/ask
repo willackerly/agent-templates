@@ -5,6 +5,8 @@
 #   ask <agent> "<question>"     Send a question, get a concise answer
 #   ask -v <agent> "<question>"  Verbose: answer + rationale + refs
 #   ask -d <agent> "<question>"  Debug: show session ID, context %, timings
+#   ask -w <agent> "<question>"  Write mode: agent can edit/create files
+#   ask watch <agent>            Follow agent's incremental progress
 #   ask up <agent>               Bring an agent online
 #   ask who                      List available agents
 #   ask status <agent>           Check agent health
@@ -32,6 +34,7 @@
 #   ASK_TIMEOUT      Override timeout in seconds (default: 120)
 #   ASK_VERBOSE      Set to 1 for verbose output to stderr
 #   ASK_DEBUG        Set to 1 for debug output (session, tokens, timing)
+#   ASK_WRITE        Set to 1 to enable write mode by default
 
 set -euo pipefail
 
@@ -44,6 +47,7 @@ VERBOSE="${ASK_VERBOSE:-0}"
 DEBUG="${ASK_DEBUG:-0}"
 MODEL="${ASK_MODEL:-sonnet}"
 CONTEXT_LIMIT="${ASK_CONTEXT_LIMIT:-70}"
+WRITE_MODE="${ASK_WRITE:-0}"
 REGISTRY="${ASK_REGISTRY:-$HOME/.config/ask/projects}"
 EVENTS_LOG="$SHARED_DIR/messages/events.jsonl"
 
@@ -210,9 +214,11 @@ ASK Scoped Knowledge — query an agent
 Usage:
   ask <agent> "<question>"     Send a question, get a concise answer
   ask -v <agent> "<question>"  Verbose: answer + rationale + refs
+  ask -w <agent> "<question>"  Write mode: agent can edit/create files
   ask project:agent "question" Query an agent in another project
   ask <agent>                    Run agent's default command (if configured)
   ask <agent> <command> [args]   Run a named agent command
+  ask watch <agent>            Follow agent's incremental progress
   ask up <agent>               Bring an agent online
   ask who                      List available agents
   ask status <agent>           Check agent health
@@ -240,6 +246,7 @@ Environment variables:
   ASK_TIMEOUT      Timeout in seconds (default: 120)
   ASK_CONTEXT_LIMIT  Auto-reset threshold, percent (default: 70)
   ASK_VERBOSE      Set to 1 for debug output
+  ASK_WRITE        Set to 1 to enable write mode by default
 USAGE
 }
 
@@ -633,14 +640,20 @@ _ask_direct() {
   local prompt
   if [ "$has_session" = true ]; then
     # Continuing session — agent already has context, just ask
+    local write_hint=""
+    if [ "$WRITE_MODE" = "1" ]; then
+      write_hint="
+
+You have write access. Use Edit, Write, and Bash tools to make changes directly."
+    fi
     if [ "$VERBOSE" = "1" ]; then
-      prompt="$question
+      prompt="$question${write_hint}
 
 Respond with: a concise answer paragraph, then a blank line, then
 1-3 sentences of reasoning, then a blank line, then relevant file
 paths as a bulleted list. No labels."
     else
-      prompt="$question
+      prompt="$question${write_hint}
 
 Respond with a single concise paragraph — the answer itself, nothing else."
     fi
@@ -657,15 +670,26 @@ Respond with a single concise paragraph — the answer itself, nothing else."
 $(cat "$agent_dir/memory.md")"
     fi
 
+    # Build tool/permission preamble based on mode
+    local tools_preamble
+    if [ "$WRITE_MODE" = "1" ]; then
+      tools_preamble="You have full access to the project filesystem including write access.
+Use Read, Grep, and Glob to research. Use Edit and Write to modify or
+create files. Use Bash for shell commands (tests, builds, git).
+Do not guess — look it up, then act on it."
+    else
+      tools_preamble="You have full access to the project filesystem. Use Read, Grep, and Glob
+tools to look up files, search code, and verify claims before answering.
+Do not guess — look it up."
+    fi
+
     if [ "$VERBOSE" = "1" ]; then
       prompt="You are the $agent agent.
 
 Your role and context:
 $context
 
-You have full access to the project filesystem. Use Read, Grep, and Glob
-tools to look up files, search code, and verify claims before answering.
-Do not guess — look it up.
+$tools_preamble
 
 Question: $question
 
@@ -691,9 +715,7 @@ Rules:
 Your role and context:
 $context
 
-You have full access to the project filesystem. Use Read, Grep, and Glob
-tools to look up files, search code, and verify claims before answering.
-Do not guess — look it up.
+$tools_preamble
 
 Question: $question
 
@@ -728,73 +750,105 @@ Rules:
   fi
 
   # Build claude command with session resumption if available
-  local claude_args=(--print --model "$MODEL" --output-format json)
+  local claude_args=(--print --model "$MODEL")
   if [ "$has_session" = true ]; then
     claude_args+=(--resume "$session_id")
   else
     claude_args+=(--session-id "$session_id")
   fi
+
+  # Write mode: grant file editing tools and appropriate permissions
+  if [ "$WRITE_MODE" = "1" ]; then
+    claude_args+=(--allowedTools "Read Grep Glob Edit Write Bash")
+    claude_args+=(--permission-mode acceptEdits)
+    log "Write mode enabled — agent can edit/create files"
+  fi
+
+  # Streaming progress: use stream-json for incremental updates,
+  # fall back to json for read-only queries
+  local progress_file="$agent_dir/.progress"
+  if [ "$WRITE_MODE" = "1" ]; then
+    claude_args+=(--output-format stream-json)
+  else
+    claude_args+=(--output-format json)
+  fi
+
   dbg "claude ${claude_args[*]} <prompt>"
 
   # Invoke claude
   local raw_response response
-  if raw_response=$(claude "${claude_args[@]}" "$prompt" 2>"$AGENTS_DIR/$agent/.last-stderr"); then
-    # Extract and store session ID for next invocation
-    local new_session_id
-    new_session_id=$(echo "$raw_response" | jq -r '.session_id // empty' 2>/dev/null || true)
-    if [ -n "$new_session_id" ]; then
-      echo "$new_session_id" > "$session_file"
-      log "Session saved: $new_session_id"
+  if [ "$WRITE_MODE" = "1" ]; then
+    # Stream mode: pipe through progress tracker, collect final result
+    _init_progress "$agent" "$question"
+    if raw_response=$(claude "${claude_args[@]}" "$prompt" 2>"$agent_dir/.last-stderr" \
+        | _stream_progress "$agent"); then
+      _finish_progress "$agent" "done"
+    else
+      _finish_progress "$agent" "error"
+      echo "ask: error: claude invocation failed" >&2
+      [ -f "$agent_dir/.last-stderr" ] && cat "$agent_dir/.last-stderr" >&2
+      exit 1
     fi
-
-    # Debug: show session and token info
-    if [ "$DEBUG" = "1" ]; then
-      local _dbg_usage
-      _dbg_usage=$(echo "$raw_response" | jq -r '
-        [.modelUsage[]] | first |
-        "tokens: in=\(.inputTokens) out=\(.outputTokens) cached=\(.cacheReadInputTokens) window=\(.contextWindow)"
-      ' 2>/dev/null || echo "tokens: unavailable")
-      dbg "$_dbg_usage"
-      dbg "session_id returned: ${new_session_id:-none}"
-    fi
-
-    # Check context window usage — auto-reset if over limit
-    _check_context_limit "$agent" "$raw_response"
-
-    # Extract the text response
-    response=$(echo "$raw_response" | jq -r '.result // .content // .' 2>/dev/null || echo "$raw_response")
-
-    # Log the answer event
-    local answer_event
-    answer_event=$(jq -n \
-      --arg id "$msg_id" \
-      --arg from "$agent" \
-      --arg to "human" \
-      --arg type "answer" \
-      --arg ts "$(timestamp)" \
-      --arg body "$response" \
-      '{id: $id, from: $from, to: $to, type: $type, timestamp: $ts, body: $body}')
-    append_event "$answer_event"
-
-    # Append to memory log
-    mkdir -p "$agent_dir"
-    {
-      echo "---"
-      echo "**$ts** Q: $question"
-      echo "A: $(echo "$response" | head -1)"
-    } >> "$agent_dir/memory.log.md"
-
-    # Auto-compact if memory log is large
-    _maybe_compact "$agent"
-
-    # Output the response
-    echo "$response"
-    exit 0
   else
-    echo "ask: error: claude invocation failed" >&2
-    [ -f "$AGENTS_DIR/$agent/.last-stderr" ] && cat "$AGENTS_DIR/$agent/.last-stderr" >&2
-    exit 1
+    # Non-stream mode: capture full response
+    if ! raw_response=$(claude "${claude_args[@]}" "$prompt" 2>"$agent_dir/.last-stderr"); then
+      echo "ask: error: claude invocation failed" >&2
+      [ -f "$agent_dir/.last-stderr" ] && cat "$agent_dir/.last-stderr" >&2
+      exit 1
+    fi
   fi
+
+  # Extract and store session ID for next invocation
+  local new_session_id
+  new_session_id=$(echo "$raw_response" | jq -r '.session_id // empty' 2>/dev/null || true)
+  if [ -n "$new_session_id" ]; then
+    echo "$new_session_id" > "$session_file"
+    log "Session saved: $new_session_id"
+  fi
+
+  # Debug: show session and token info
+  if [ "$DEBUG" = "1" ]; then
+    local _dbg_usage
+    _dbg_usage=$(echo "$raw_response" | jq -r '
+      [.modelUsage[]] | first |
+      "tokens: in=\(.inputTokens) out=\(.outputTokens) cached=\(.cacheReadInputTokens) window=\(.contextWindow)"
+    ' 2>/dev/null || echo "tokens: unavailable")
+    dbg "$_dbg_usage"
+    dbg "session_id returned: ${new_session_id:-none}"
+  fi
+
+  # Check context window usage — auto-reset if over limit
+  _check_context_limit "$agent" "$raw_response"
+
+  # Extract the text response
+  response=$(echo "$raw_response" | jq -r '.result // .content // .' 2>/dev/null || echo "$raw_response")
+
+  # Log the answer event
+  local answer_event
+  answer_event=$(jq -n \
+    --arg id "$msg_id" \
+    --arg from "$agent" \
+    --arg to "human" \
+    --arg type "answer" \
+    --arg ts "$(timestamp)" \
+    --arg body "$response" \
+    '{id: $id, from: $from, to: $to, type: $type, timestamp: $ts, body: $body}')
+  append_event "$answer_event"
+
+  # Append to memory log
+  mkdir -p "$agent_dir"
+  {
+    echo "---"
+    echo "**$ts** Q: $question"
+    echo "A: $(echo "$response" | head -1)"
+  } >> "$agent_dir/memory.log.md"
+
+  # Auto-compact if memory log is large
+  _maybe_compact "$agent"
+
+  # Output the response
+  echo "$response"
+  exit 0
 }
 
 _ask_via_inbox() {
@@ -864,6 +918,98 @@ EOJSON
   # Clean up outbox
   rm -f "$outbox_file"
   exit 0
+}
+
+# --- Incremental Progress -----------------------------------------------------
+#
+# When using -w (write mode), claude runs with --output-format stream-json.
+# Each line is a JSON object representing a streaming event. We parse these
+# in real time, writing human-readable progress to .progress so a watcher
+# (ask watch <agent>) can follow along.
+#
+# Stream event types we care about:
+#   {"type":"assistant","message":{"content":[{"type":"tool_use","name":"Edit",...}]}}
+#   {"type":"assistant","message":{"content":[{"type":"text","text":"..."}]}}
+#   {"type":"result","session_id":"...","result":"..."}
+#
+
+_init_progress() {
+  local agent="$1" question="$2"
+  local progress_file="$AGENTS_DIR/$agent/.progress"
+  cat > "$progress_file" <<EOF
+# ask $agent — $(timestamp)
+# Q: $question
+# status: running
+---
+EOF
+  log "Progress file: $progress_file (use 'ask watch $agent' to follow)"
+}
+
+_finish_progress() {
+  local agent="$1" status="$2"
+  local progress_file="$AGENTS_DIR/$agent/.progress"
+  echo "---" >> "$progress_file"
+  echo "# status: $status — $(timestamp)" >> "$progress_file"
+}
+
+_stream_progress() {
+  # Read stream-json lines from stdin, write progress to .progress file,
+  # and collect the final result JSON on stdout for the caller.
+  #
+  # This function acts as a tee: progress goes to the file, the last
+  # "result" line goes to stdout so the caller can parse session_id, etc.
+  local agent="$1"
+  local progress_file="$AGENTS_DIR/$agent/.progress"
+  local last_result_line=""
+  local step=0
+
+  while IFS= read -r line; do
+    # Every line is a JSON object from stream-json
+    local event_type
+    event_type=$(echo "$line" | jq -r '.type // empty' 2>/dev/null || true)
+
+    case "$event_type" in
+      assistant)
+        # Parse content blocks for tool calls and text
+        local content_type tool_name tool_input_file text_snippet
+        content_type=$(echo "$line" | jq -r '
+          .message.content[-1].type // empty
+        ' 2>/dev/null || true)
+
+        if [ "$content_type" = "tool_use" ]; then
+          step=$((step + 1))
+          tool_name=$(echo "$line" | jq -r '.message.content[-1].name // "?"' 2>/dev/null || true)
+          tool_input_file=$(echo "$line" | jq -r '
+            .message.content[-1].input.file_path //
+            .message.content[-1].input.path //
+            .message.content[-1].input.pattern //
+            .message.content[-1].input.command //
+            empty
+          ' 2>/dev/null || true)
+          # Truncate long commands/paths for readability
+          [ ${#tool_input_file} -gt 80 ] && tool_input_file="${tool_input_file:0:77}..."
+          echo "[$step] $tool_name ${tool_input_file}" >> "$progress_file"
+          dbg "progress: [$step] $tool_name $tool_input_file"
+        elif [ "$content_type" = "text" ]; then
+          text_snippet=$(echo "$line" | jq -r '
+            .message.content[-1].text // empty
+          ' 2>/dev/null | head -1 | cut -c1-120 || true)
+          if [ -n "$text_snippet" ]; then
+            echo "  ... $text_snippet" >> "$progress_file"
+          fi
+        fi
+        ;;
+      result)
+        # Final result — pass through to stdout
+        last_result_line="$line"
+        ;;
+    esac
+  done
+
+  # Emit the final result for the caller to parse
+  if [ -n "$last_result_line" ]; then
+    echo "$last_result_line"
+  fi
 }
 
 _agent_loop() {
@@ -1213,6 +1359,7 @@ _ensure_gitignore() {
     "agents/*/outbox/"
     "agents/*/.pid"
     "agents/*/.last-stderr"
+    "agents/*/.progress"
     "agents/*/.session-id"
     "agents/*/memory.log.md"
     "shared/messages/events.jsonl"
@@ -1256,6 +1403,7 @@ while [ $# -gt 0 ]; do
   case "$1" in
     -v|--verbose) VERBOSE=1; shift ;;
     -d|--debug)   DEBUG=1; VERBOSE=1; shift ;;
+    -w|--write)   WRITE_MODE=1; shift ;;
     *)            break ;;
   esac
 done
@@ -1292,6 +1440,24 @@ case "$CMD" in
     ;;
   up)
     cmd_up "${2:-}"
+    ;;
+  watch)
+    require_agent_name "${2:-}"
+    require_agent_exists "$2"
+    _progress_file="$AGENTS_DIR/$2/.progress"
+    if [ ! -f "$_progress_file" ]; then
+      echo "No active progress for $2. Start a write-mode query first:" >&2
+      echo "  ask -w $2 \"<question>\"" >&2
+      exit 2
+    fi
+    cat "$_progress_file"
+    echo ""
+    # If still running, tail for updates
+    if grep -q "status: running" "$_progress_file" 2>/dev/null; then
+      echo "--- following live (Ctrl+C to stop) ---"
+      tail -f "$_progress_file" 2>/dev/null
+    fi
+    exit 0
     ;;
   reset)
     cmd_reset "${2:-}"

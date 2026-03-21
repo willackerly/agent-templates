@@ -196,6 +196,30 @@ config, methodology, contract system, and agent orchestration templates.
 See: https://github.com/willackerly/rebar"
 ```
 
+## Adoption Timing
+
+**If you already have architecture docs and API specs,** contract
+adoption is a 2-3 hour reformatting exercise with 6-way worktree
+fanout. The agents reformat existing knowledge into the contract
+template — they don't invent contracts from scratch.
+
+**If you don't have architecture docs,** write those first. You can't
+formalize contracts for systems you haven't documented.
+
+**Recommended adoption sequence for existing projects:**
+
+1. Doc consistency (fix stale refs, numeric claims)
+2. API spec parity (one spec per route module)
+3. Contract scaffolding (methodology, conventions, architecture/, agents/)
+4. Contract creation (worktree fanout from existing docs)
+5. Header stamping (Tier 1 then Tier 2, both via worktree fanout)
+6. Role definitions (AGENT.md files with project-specific context)
+7. ASK CLI integration (immediate payoff from role definitions)
+8. BDD Gherkin scenarios (capstone — last, not first)
+
+This is the reverse of the greenfield sequence (BDD → contracts → code)
+but the only practical order for existing codebases.
+
 ## Ongoing Maintenance
 
 | Cadence | Action |

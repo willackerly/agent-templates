@@ -1,9 +1,15 @@
-# Methodology: Contract-Driven Agent Development
+# Methodology: Swarm-Coordinated, Contract-Driven Agent Development
 
-**The central thesis:** Agent output quality is bounded by the quality of the
-information environment agents operate in. Contracts are the operating system
-of that environment. Everything else — autonomy, testing, documentation,
-orchestration — runs on top of contracts.
+**The central thesis:** You don't have one agent — you have a swarm. The
+swarm's effectiveness is bounded by how well agents coordinate across five
+dimensions: across agents (parallel work), across repos (shared systems),
+across roles (specialist perspectives), across sessions (persistent memory),
+and across failures (learned mitigations).
+
+Contracts are the operating system of this coordination — the shared truth
+that lets 10 agents work the same codebase without stepping on each other.
+Everything else — autonomy, testing, documentation, orchestration, collective
+learning — runs on top of contracts.
 
 ---
 
@@ -574,16 +580,17 @@ QA is fully automated — no separate QA agent:
 
 ## Summary
 
-| Principle | Implementation |
-|-----------|---------------|
-| Contracts are the operating system | `architecture/CONTRACT-*.md` with doubly-linked code refs |
-| BDD first: who and why | `product/` with personas, epics, features before contracts |
-| Max autonomy within contracts | AGENTS.md autonomy model |
-| Trust but verify | Freshness markers, pre-launch audits, filesystem as truth |
-| Information environment is infrastructure | Cold Start Quad, anti-drift mechanisms |
-| Encode corrections as templates | `agents/subagent-prompts/` for repeatable tasks |
-| Fast inner loops | Testing Cascade T0-T5 |
-| Parallel by default | Worktree isolation, subagent templates, fan-out patterns |
+| Principle | Implementation | Swarm Dimension |
+|-----------|---------------|----------------|
+| Contracts are the operating system | `architecture/CONTRACT-*.md` with doubly-linked code refs | Cross-agent (shared truth) |
+| BDD first: who and why | `product/` with personas, epics, features before contracts | Cross-role (product ↔ architect) |
+| Max autonomy within contracts | AGENTS.md autonomy model | Cross-agent (safe parallelism) |
+| Trust but verify | Freshness markers, pre-launch audits, filesystem as truth | Cross-session (drift detection) |
+| Information environment is infrastructure | Cold Start Quad, anti-drift mechanisms | Cross-session (context preservation) |
+| Encode corrections as templates | `agents/subagent-prompts/` for repeatable tasks | Cross-failure (learned mitigations) |
+| Fast inner loops | Testing Cascade T0-T5 | Cross-agent (independent validation) |
+| Parallel by default | Worktree isolation, subagent templates, fan-out patterns | Cross-agent (coordination) |
+| Collective learning | ASK persistent sessions, memory, failure patterns | Cross-session, cross-repo |
 
 ---
 
