@@ -284,6 +284,9 @@ A built-in way to see all running agents, their last heartbeat, last commit, cur
 #### P5: Shared file conflict detection at launch
 When launching multiple worktree agents, warn if their prompts reference overlapping files. "Agents P-1 and D-3 both mention table-renderer.ts — merge conflicts likely." This is static analysis of prompts, not runtime detection.
 
+#### P5.1: Namespaced auto-generated outputs
+Auto-generated files (baselines, reports, metrics) should be namespaced by agent ID rather than written to a shared path. Example: instead of all agents writing to `fidelity-baselines.json` (guaranteed merge conflict), each writes to `fidelity-baselines-P3-charts.json`. The parent merges them post-fanout with a simple script. This eliminates the #1 source of mechanical merge conflicts — files that aren't "code" but get committed for tracking. Pattern: `<filename>-<agent-id>.<ext>` for any file in a configurable "conflict-prone outputs" list.
+
 ### Collective Learning Layer (the real vision)
 
 #### P6: Cross-agent knowledge propagation
