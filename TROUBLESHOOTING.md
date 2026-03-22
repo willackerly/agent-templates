@@ -95,7 +95,7 @@ ls architecture/CONTRACT-*.md
 1. **Use worktree isolation** — each agent gets its own working copy
 2. **Follow practices/worktree-collaboration.md** for coordination patterns
 3. **See [OpenDocKit case study](feedback/2026-03-18-opendockit-fidelity-session.md)** for 9-agent coordination patterns
-4. **Consider [Dapple SafeSign approach](feedback/dapple-safesign-feedback.md)** — 18 agents, 0 conflicts
+4. **Consider [Human-based Digital Signer approach](feedback/digital-signer-feedback.md)** — 18 agents, 0 conflicts
 
 ---
 
@@ -114,7 +114,7 @@ ls architecture/CONTRACT-*.md
 **Symptoms:** Docs say "126 tests" but you have 586, test counts wrong, metrics stale
 
 **Solution:**
-- Implement **ground truth enforcement** from [Dapple SafeSign case](feedback/dapple-safesign-feedback.md)
+- Implement **ground truth enforcement** from [Human-based Digital Signer case](feedback/digital-signer-feedback.md)
 - Use `METRICS.template` file with computed values
 - Set up `scripts/check-ground-truth.sh` to verify claims
 - Consider tier 2 or 3 for automated enforcement
@@ -251,7 +251,7 @@ REBAR_TIER=3  # Enforced: + ground truth, strict steward
    - Introduce agents after team sees value
 
 3. **Show real results:**
-   - [Dapple SafeSign](feedback/dapple-safesign-feedback.md): 0 merge conflicts
+   - [Human-based Digital Signer](feedback/digital-signer-feedback.md): 0 merge conflicts
    - [blindpipe](feedback/blindpipe-adoption-2026-03-19.md): 10x context efficiency
    - [OpenDocKit](feedback/2026-03-18-opendockit-fidelity-session.md): 100% work recovery
 

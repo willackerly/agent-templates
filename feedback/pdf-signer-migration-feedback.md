@@ -1,6 +1,6 @@
 # Feedback: Migrating an Existing Production Project to rebar
 
-**Source project:** Dapple SafeSign (pdf-signer-web) — local-first, zero-knowledge PDF signing with biometric identity binding
+**Source project:** Human-based Digital Signer (pdf-signer-web) — local-first, zero-knowledge PDF signing with biometric identity binding
 **Project type:** Web app monorepo (React/Vite client, Express API, 6 packages, shared types/utils)
 **Scale:** 586 unit tests (38 files, 7 packages), 80 E2E specs, 15 Playwright configs, 14 API route modules, 48 endpoints, ~50k LOC
 **Maturity:** 3+ months of heavy agent-driven development, production deployed, 5 workstreams shipped
@@ -10,7 +10,7 @@
 
 ## Why This Feedback Exists
 
-The first SafeSign feedback document (`dapple-safesign-feedback.md`) focused on gaps in the template system itself — ground truth enforcement, numeric drift, deploy safety. This document addresses a different problem: **the templates have no clear migration path for projects that already exist and already have extensive (but differently-structured) documentation.**
+The first Digital Signer feedback document (`dapple-safesign-feedback.md`) focused on gaps in the template system itself — ground truth enforcement, numeric drift, deploy safety. This document addresses a different problem: **the templates have no clear migration path for projects that already exist and already have extensive (but differently-structured) documentation.**
 
 SETUP.md assumes you're starting fresh or near-fresh. For a project like ours — with 6 established documentation files, 14 architecture docs, 13 API specs, 4 CI workflows, and battle-tested enforcement scripts — the instructions "diff your existing docs against the templates" undersells the complexity by an order of magnitude.
 
@@ -428,7 +428,7 @@ Write Gherkin when you want to:
 4. Link contracts to their features: `**Source:** product/features/encrypted-storage.feature`
 5. Don't try to write scenarios for every edge case — focus on the core behaviors that motivated the contract
 
-### Suggested Personas for SafeSign
+### Suggested Personas for Digital Signer
 
 From our product requirements, we'd extract:
 - **Sarah (sender)** — Creates envelopes, adds recipients, tracks completion
@@ -470,7 +470,7 @@ The templates are designed for greenfield adoption: write contracts → implemen
 
 ## Appendix: Our Planned Adoption Sequence
 
-For reference, here's the order we intend to adopt the remaining template components in SafeSign:
+For reference, here's the order we intend to adopt the remaining template components in Digital Signer:
 
 1. **Copy DESIGN.md** — reference material, zero risk
 2. **Create agents/ directory** — formalize our subagent prompts

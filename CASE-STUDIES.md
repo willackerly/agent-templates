@@ -18,7 +18,7 @@ This directory contains 12 detailed adoption reports from production systems tha
 
 | Problem | See This Case Study | Key Solution |
 |---------|---------------------|--------------|
-| **Numbers in docs drift from reality** | [Dapple SafeSign](feedback/dapple-safesign-feedback.md) | Ground truth enforcement layer |
+| **Numbers in docs drift from reality** | [Human-based Digital Signer](feedback/digital-signer-feedback.md) | Ground truth enforcement layer |
 | **Want to adopt rebar in mature codebase** | [blindpipe Adoption](feedback/blindpipe-adoption-2026-03-19.md) | Selective adoption strategy |
 | **Scaling beyond solo development** | [Scalability Assessment](feedback/scalability-assessment-2026-03-20.md) | Tier progression patterns |
 | **Version migration and compatibility** | [Versioning & Upgrade Path](feedback/versioning-and-upgrade-path-2026-03-20.md) | Backwards compatibility strategies |
@@ -32,7 +32,7 @@ This directory contains 12 detailed adoption reports from production systems tha
 
 | Project Type | Case Study | Key Insights |
 |--------------|------------|--------------|
-| **Web App** (React + API) | [Dapple SafeSign](feedback/dapple-safesign-feedback.md) | Monorepo patterns, E2E testing with 586 unit tests |
+| **Web App** (React + API) | [Human-based Digital Signer](feedback/digital-signer-feedback.md) | Monorepo patterns, E2E testing with 586 unit tests |
 | **Crypto Library** | [blindpipe](feedback/blindpipe-adoption-2026-03-19.md) | Security-critical development, selective adoption |
 | **Document Processing** | [OpenDocKit](feedback/2026-03-18-opendockit-fidelity-session.md) | 5,824 tests, progressive fidelity rendering |
 | **Enterprise Platform** | [Scalability Assessment](feedback/scalability-assessment-2026-03-20.md) | Multi-repo coordination, governance patterns |
@@ -42,7 +42,7 @@ This directory contains 12 detailed adoption reports from production systems tha
 | Team Size | Case Study | Coordination Patterns |
 |-----------|------------|---------------------|
 | **Solo Developer** | [blindpipe](feedback/blindpipe-adoption-2026-03-19.md) | ASK CLI for 10x context efficiency |
-| **Small Team (2-10)** | [Dapple SafeSign](feedback/dapple-safesign-feedback.md) | 18 agents, 3 phases, 0 merge conflicts |
+| **Small Team (2-10)** | [Human-based Digital Signer](feedback/digital-signer-feedback.md) | 18 agents, 3 phases, 0 merge conflicts |
 | **Department (10+)** | [Scalability Assessment](feedback/scalability-assessment-2026-03-20.md) | Cross-repo contracts, breaking change detection |
 | **Multi-Agent Swarms** | [OpenDocKit](feedback/2026-03-18-opendockit-fidelity-session.md) | 9 simultaneous agents, failure recovery |
 
@@ -52,8 +52,8 @@ This directory contains 12 detailed adoption reports from production systems tha
 
 ## Production Success Stories
 
-### 🎯 **Dapple SafeSign** — Web App Excellence
-**File:** [feedback/dapple-safesign-feedback.md](feedback/dapple-safesign-feedback.md) • **Size:** 20.3K
+### 🎯 **Human-based Digital Signer** — Web App Excellence
+**File:** [feedback/digital-signer-feedback.md](feedback/digital-signer-feedback.md) • **Size:** 20.3K
 
 **Project:** React/Vite + Express API monorepo with biometric identity
 **Scale:** 586 unit tests, 80 E2E specs, ~50k LOC
@@ -202,7 +202,7 @@ This directory contains 12 detailed adoption reports from production systems tha
 # How to Use This Guide
 
 ## 📚 **For Learning**
-- **Start with:** [Dapple SafeSign](feedback/dapple-safesign-feedback.md) or [blindpipe](feedback/blindpipe-adoption-2026-03-19.md) — see rebar in action
+- **Start with:** [Human-based Digital Signer](feedback/digital-signer-feedback.md) or [blindpipe](feedback/blindpipe-adoption-2026-03-19.md) — see rebar in action
 - **Then read:** [Scalability Assessment](feedback/scalability-assessment-2026-03-20.md) — understand growth patterns
 - **Deep dive:** [OpenDocKit](feedback/2026-03-18-opendockit-fidelity-session.md) — see complex coordination patterns
 

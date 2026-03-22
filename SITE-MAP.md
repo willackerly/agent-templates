@@ -144,7 +144,7 @@ Execution → practices/worktree-collaboration.md → Integration
 
 | Problem | Solution | File |
 |---------|----------|------|
-| Numbers drift from reality | Ground truth enforcement | [Dapple SafeSign case](feedback/dapple-safesign-feedback.md) |
+| Numbers drift from reality | Ground truth enforcement | [Human-based Digital Signer case](feedback/digital-signer-feedback.md) |
 | Mature codebase adoption | Selective adoption strategy | [blindpipe case](feedback/blindpipe-adoption-2026-03-19.md) |
 | Agent coordination failures | Swarm orchestration protocols | [OpenDocKit case](feedback/2026-03-18-opendockit-fidelity-session.md) |
 | Merge conflicts | Worktree collaboration | [practices/worktree-collaboration.md](practices/worktree-collaboration.md) |

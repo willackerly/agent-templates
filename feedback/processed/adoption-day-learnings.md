@@ -1,6 +1,6 @@
 # Feedback: Day-One Adoption Learnings (Full Contract System Migration)
 
-**Source project:** Dapple SafeSign (pdf-signer-web)
+**Source project:** Human-based Digital Signer (pdf-signer-web)
 **What happened:** Full contract system adoption in a single session — scaffolding, 17 contracts, 169 headers, 4 role definitions, ASK CLI integration
 **Date:** 2026-03-18
 

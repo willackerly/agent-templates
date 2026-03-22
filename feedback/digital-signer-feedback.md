@@ -1,4 +1,4 @@
-# Feedback from Dapple SafeSign (pdf-signer-web)
+# Feedback from Human-based Digital Signer (pdf-signer-web)
 
 **Project type:** Web app — monorepo (React/Vite client, Express API, shared packages, vendored PDF library, biometric identity surface)
 **Scale:** 586 unit tests, 80 E2E specs, 15 Playwright configs, 14 API route modules, ~50k LOC
