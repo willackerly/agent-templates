@@ -14,11 +14,26 @@ How your team structures knowledge so both humans AND agents can navigate at sca
 
 ## 2. Swarm Coordination Platform
 How 10+ agents work together without destroying each other's work:
+
+### The ASK Tool — Persistent Multi-Role Agent System
+**What it is:** Enterprise-grade CLI that maintains persistent agent sessions across projects and time. Instead of ephemeral subagents that cost 10x context on each question, ASK agents accumulate knowledge and coordinate through specialized roles.
+
+**How it's used:**
+```bash
+ask architect "Should we add caching to the user service?"
+ask product "Does this contract match our user stories?"
+ask englead "Are we ready to merge this feature?"
+ask steward "What contracts need attention?"
+```
+
+**What it accomplishes:**
 - **Cross-agent** — shared progress tracking, conflict avoidance, incremental checkpointing
 - **Cross-repo** — learnings in one repo propagate to siblings automatically
 - **Cross-role** — architect agent findings surface to product agent, and vice versa
 - **Cross-session** — today's agent learns what yesterday's agent discovered
 - **Cross-failure** — when agents fail, failure modes become swarm knowledge
+
+**The result:** 10x context efficiency + coordinated decision-making across your entire development workflow.
 
 **The result:** Your codebase becomes a *living system* where information stays organized, agents coordinate seamlessly, and collective intelligence compounds across every session.
 
