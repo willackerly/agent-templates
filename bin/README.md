@@ -34,11 +34,19 @@ See the [root README](../README.md) for how ASK fits into the overall system.
 ## Installation
 
 ```bash
-# Add to PATH or symlink
-ln -s "$(pwd)/bin/ask" /usr/local/bin/ask
+# From the rebar repo root:
+./bin/install
+
+# Or with ASK_SERVER for remote agent access:
+./bin/install --server 192.168.0.181:7232
 ```
 
-**Dependencies:** bash 4.0+, jq, claude CLI.
+This adds `bin/` to your PATH (in `.zshrc`/`.bashrc`/`.profile`), optionally
+sets `ASK_SERVER`, and checks dependencies. Idempotent — safe to run again.
+
+Then apply with `source ~/.zshrc` (or open a new terminal).
+
+**Dependencies:** bash 4.0+, jq, claude CLI, python3 (for ask-server).
 
 ## Commands
 

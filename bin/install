@@ -1,0 +1,108 @@
+#!/usr/bin/env bash
+# install — Add rebar's bin/ to PATH and optionally configure ASK_SERVER.
+#
+# Usage:
+#   ./bin/install              # interactive
+#   ./bin/install --server IP:PORT  # also set ASK_SERVER
+#
+# Idempotent — safe to run multiple times.
+
+set -euo pipefail
+
+BIN_DIR="$(cd "$(dirname "$0")" && pwd)"
+SHELL_NAME="$(basename "$SHELL")"
+
+# Detect RC file
+case "$SHELL_NAME" in
+  zsh)  RC_FILE="$HOME/.zshrc" ;;
+  bash) RC_FILE="$HOME/.bashrc" ;;
+  *)    RC_FILE="$HOME/.profile" ;;
+esac
+
+# Parse args
+ASK_SERVER_VAL=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --server) ASK_SERVER_VAL="$2"; shift 2 ;;
+    --server=*) ASK_SERVER_VAL="${1#--server=}"; shift ;;
+    -h|--help)
+      echo "Usage: ./bin/install [--server HOST:PORT]"
+      echo ""
+      echo "Adds rebar bin/ to PATH in your shell RC file."
+      echo "With --server, also sets ASK_SERVER for remote agent queries."
+      exit 0
+      ;;
+    *) echo "Unknown option: $1"; exit 1 ;;
+  esac
+done
+
+echo "rebar install"
+echo "============="
+echo ""
+
+# --- PATH ---
+PATH_LINE="export PATH=\"$BIN_DIR:\$PATH\""
+
+if grep -qF "$BIN_DIR" "$RC_FILE" 2>/dev/null; then
+  echo "[ok] PATH already includes $BIN_DIR"
+else
+  echo "" >> "$RC_FILE"
+  echo "# rebar CLI tools (ask, ask-server)" >> "$RC_FILE"
+  echo "$PATH_LINE" >> "$RC_FILE"
+  echo "[added] PATH → $RC_FILE"
+fi
+
+# --- ASK_SERVER ---
+if [ -n "$ASK_SERVER_VAL" ]; then
+  if grep -qF "ASK_SERVER" "$RC_FILE" 2>/dev/null; then
+    # Update existing value
+    sed -i.bak "s|export ASK_SERVER=.*|export ASK_SERVER=$ASK_SERVER_VAL|" "$RC_FILE"
+    rm -f "$RC_FILE.bak"
+    echo "[updated] ASK_SERVER=$ASK_SERVER_VAL in $RC_FILE"
+  else
+    echo "export ASK_SERVER=$ASK_SERVER_VAL" >> "$RC_FILE"
+    echo "[added] ASK_SERVER=$ASK_SERVER_VAL → $RC_FILE"
+  fi
+fi
+
+echo ""
+echo "Run this to apply now:"
+echo ""
+echo "  source $RC_FILE"
+echo ""
+
+# Verify dependencies
+echo "Checking dependencies..."
+ok=true
+for dep in jq claude; do
+  if command -v "$dep" &>/dev/null; then
+    echo "  [ok] $dep"
+  else
+    echo "  [missing] $dep"
+    ok=false
+  fi
+done
+
+if command -v bash &>/dev/null; then
+  bash_version=$(bash -c 'echo ${BASH_VERSINFO[0]}')
+  if [ "$bash_version" -ge 4 ] 2>/dev/null; then
+    echo "  [ok] bash $bash_version.x"
+  else
+    echo "  [warn] bash $bash_version.x (need 4.0+, brew install bash)"
+    ok=false
+  fi
+fi
+
+if command -v python3 &>/dev/null; then
+  echo "  [ok] python3 (for ask-server)"
+else
+  echo "  [missing] python3 (needed for ask-server)"
+  ok=false
+fi
+
+echo ""
+if [ "$ok" = true ]; then
+  echo "Ready! Try: ask who"
+else
+  echo "Install missing dependencies above, then try: ask who"
+fi
