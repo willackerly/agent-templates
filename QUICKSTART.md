@@ -1,0 +1,132 @@
+📍 **You are here:** **Try It (5 min)** → [Love It (1 hour)](FEATURE-DEVELOPMENT.md) → [Master It](CASE-STUDIES.md)
+
+# Rebar Quickstart
+
+**Get rebar working in 5 minutes**
+
+Experience rebar's value immediately: write one contract, link it to code, see agent coordination in action.
+
+---
+
+## Solo Developer Setup
+
+### Step 1: Copy the essentials (2 minutes)
+```bash
+# Clone or download rebar
+git clone <rebar-repo> /path/to/rebar
+cd /path/to/your-project
+
+# Copy core files
+cp /path/to/rebar/QUICKCONTEXT.template.md QUICKCONTEXT.md
+cp /path/to/rebar/TODO.template.md TODO.md
+cp /path/to/rebar/AGENTS.template.md AGENTS.md
+cp /path/to/rebar/CLAUDE.template.md CLAUDE.md
+cp -r /path/to/rebar/architecture/ architecture/
+cp -r /path/to/rebar/scripts/ scripts/
+
+# Set tier (1=minimal enforcement)
+echo "REBAR_TIER=1" > .rebarrc
+echo "v1.2.0" > .rebar-version
+
+chmod +x scripts/*.sh
+```
+
+### Step 2: Write your first contract (3 minutes)
+
+**Create a simple file service contract:**
+```bash
+# Create your first contract
+touch architecture/CONTRACT-C1-FILESTORE.1.0.md
+```
+
+```markdown
+# CONTRACT-C1-FILESTORE.1.0
+
+**Version:** 1.0
+**Status:** draft
+**Owner:** you
+
+## Purpose
+Simple file storage for user uploads. Save/retrieve files by key.
+
+## Interface
+```go
+type FileStore interface {
+    Save(key string, data []byte) error
+    Load(key string) ([]byte, error)
+    Delete(key string) error
+}
+```
+
+## Behavioral Contracts
+
+| Behavior | Specification |
+|----------|--------------|
+| Save with empty data | Returns ErrInvalidInput |
+| Load missing file | Returns ErrNotFound |
+| Delete missing file | No-op, returns nil |
+```
+
+**Link it to code:**
+```go
+// filestore.go
+// CONTRACT:C1-FILESTORE.1.0
+package main
+
+func Save(key string, data []byte) error {
+    if len(data) == 0 {
+        return ErrInvalidInput  // Contract compliance
+    }
+    // ... implementation
+}
+```
+
+**Verify the link:**
+```bash
+grep -r "CONTRACT:C1-FILESTORE" .
+scripts/check-contract-refs.sh  # Should pass
+```
+
+---
+
+## You're Done! 🎉
+
+**What you just experienced:**
+- ✅ **Information organization** — contract linked to implementation
+- ✅ **Quality automation** — verification scripts catch drift
+- ✅ **Agent coordination** — any agent can now implement this contract correctly
+
+**Test agent coordination:**
+```bash
+ask architect "Review CONTRACT:C1-FILESTORE.1.0 - any integration concerns?"
+ask product "Does this file storage meet basic user needs?"
+```
+
+---
+
+## 🎯 **Next Steps**
+
+### Ready for the full experience?
+**→ [FEATURE-DEVELOPMENT.md](FEATURE-DEVELOPMENT.md)** — Complete BDD → Contract → Code → Test workflow (1 hour)
+
+### Want to understand agent coordination?
+**→ [AGENTS-QUICKSTART.md](AGENTS-QUICKSTART.md)** — Role agents vs subagent templates (15 min)
+
+### Need to solve a specific problem?
+**→ [CASE-STUDIES.md](CASE-STUDIES.md)** — Real-world solutions indexed by problem type
+
+### Ready to scale your team?
+**→ [profiles/](profiles/)** — Solo dev → small team → department progression
+
+---
+
+## 🆘 **Troubleshooting**
+
+| Problem | Solution |
+|---------|----------|
+| Scripts fail with permissions | `chmod +x scripts/*.sh` |
+| Contract check fails | Make sure CONTRACT: comment matches filename exactly |
+| Agents give generic answers | Fill in QUICKCONTEXT.md with your project details |
+| Too overwhelming | Stick to just this quickstart until it feels natural |
+
+**Remember:** Start small, build confidence, then expand. The 5-minute setup you just did is the foundation for everything else rebar offers.

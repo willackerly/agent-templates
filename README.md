@@ -1,38 +1,75 @@
 # rebar
 
-**The coordination layer for AI agent swarms.**
+**The dual-purpose foundation for AI-powered development teams.**
 
-You don't have one agent — you have ten, across three repos, running in
-parallel worktrees, and half of them just discovered the same bug from
-different angles. One crashed mid-flight. Another modified a file the
-third one depends on. Nobody noticed until the cherry-picks conflicted.
+Rebar is **two things in one**:
 
-Rebar solves this. It's the shared substrate that lets agents coordinate
-across every dimension that matters:
+## 1. Information Organization Model
+How your team structures knowledge so both humans AND agents can navigate at scale:
+- **Architecture contracts** — behavioral specifications that survive team turnover
+- **Product requirements & BDD** — living documentation that drives implementation
+- **Testing tiers (T0-T5)** — from unit tests to integration, each tier enforced
+- **Role-based workflows** — architect, product, eng lead, developer boundaries
+- **Cross-cutting discovery** — patterns, gotchas, technical debt tracked persistently
 
-- **Cross-agent** — 10 agents, same codebase, zero merge conflicts
-- **Cross-repo** — learnings in one repo propagate to siblings
-- **Cross-role** — architect, tester, product, eng lead see different facets, share findings
+## 2. Swarm Coordination Platform
+How 10+ agents work together without destroying each other's work:
+- **Cross-agent** — shared progress tracking, conflict avoidance, incremental checkpointing
+- **Cross-repo** — learnings in one repo propagate to siblings automatically
+- **Cross-role** — architect agent findings surface to product agent, and vice versa
 - **Cross-session** — today's agent learns what yesterday's agent discovered
-- **Cross-failure** — when an agent fails, the failure mode becomes swarm knowledge
+- **Cross-failure** — when agents fail, failure modes become swarm knowledge
 
-30 minutes to set up. Zero infrastructure. Everything is plain text — bash,
-markdown, grep, jq. No framework to install. Copy files into your project,
-and your agents immediately coordinate.
+**The result:** Your codebase becomes a *living system* where information stays organized, agents coordinate seamlessly, and collective intelligence compounds across every session.
+
+30 minutes to set up. Zero infrastructure. Everything is plain text — bash, markdown, grep, jq. No framework to install. Copy files into your project, and both your organization model AND agent coordination work immediately.
+
+---
+
+# Getting Started: Choose Your Path
+
+## 🚀 **Try It** (5 minutes)
+*Just want to see what rebar is about?*
+
+**Solo developer quickstart:**
+```bash
+# Copy the essentials
+curl -L rebar.dev/quickstart | bash
+# Edit your first contract → link it to code → see the magic
+```
+
+**What you get:** Contracts linked to code + agent coordination + immediate productivity boost
+**Perfect for:** Solo devs, 1-3 repos, testing the waters
+**[→ QUICKSTART GUIDE](QUICKSTART.md)**
+
+## ❤️ **Love It** (1 hour)
+*Ready to experience rebar's full value?*
+
+**Guided feature development journey:**
+1. **BDD scenario** → define what success looks like
+2. **Contract first** → specify behavior before code
+3. **Agent coordination** → architect + product + engineer perspectives
+4. **Quality cascade** → T0-T5 testing with automated enforcement
+
+**What you get:** Complete workflow that scales from solo to swarm
+**Perfect for:** Teams ready to adopt AI-first development
+**[→ FEATURE DEVELOPMENT GUIDE](FEATURE-DEVELOPMENT.md)**
+
+## 🎯 **Master It** (ongoing)
+*Need advanced patterns for scaling, coordination, or specific problems?*
+
+**Navigate by what you need:**
+- **[Scaling](profiles/)** — Solo → Small Team → Department (tier progression)
+- **[Quality](DESIGN.md)** — Contracts → Testing → Enforcement
+- **[Coordination](practices/)** — Multi-agent → Worktrees → Swarms
+- **[Case Studies](CASE-STUDIES.md)** — Real-world solutions indexed by problem
+
+**What you get:** Battle-tested patterns from 100+ agent launches
+**Perfect for:** Teams hitting limits, complex coordination needs
 
 ---
 
-## What You Get
-
-| If you're... | Rebar gives you... | Setup |
-|---|---|---|
-| **Solo dev**, 1-3 repos | Contracts + grep-based discovery + persistent agent memory | 15 min |
-| **Small team**, shared repos | + CI enforcement + automated health scans + zero-tolerance testing | 45 min |
-| **Department**, cross-repo | + contract catalog + breaking change detection + shared agent knowledge | 2 hours |
-
-Every tier is just git. No services until you outgrow 50 devs. [Details by team size](profiles/).
-
----
+# How It Works
 
 ## The 5-Minute Picture
 
@@ -95,6 +132,27 @@ $ ask product "does offline sync need a new contract?"
 
 ---
 
+# Battle-Tested Results
+
+Rebar has been proven across 100+ worktree agent launches in four production projects:
+
+| Project | Swarm Scale | What Happened |
+|---------|------------|--------------|
+| **Dapple SafeSign** | 18 agents, 3 phases | 17 contracts, 169 headers, **0 merge conflicts**, 3 hours wall clock |
+| **blindpipe** | Selective adoption | Crypto-critical ZK suite. ASK sessions save **10x context** vs ephemeral subagents |
+| **OpenDocKit** | 9 simultaneous agents | 5,824 tests, progressive-fidelity OOXML renderer. Proved the 6-rule agent protocol |
+| **Office 180** | Multi-repo swarm | Cross-repo namespacing, AI-native contract frontmatter |
+
+**Key insight from OpenDocKit:** 100% of committed agent work was recoverable after login expiration incidents. Uncommitted work was the only true loss — which the commit-per-chunk protocol minimizes.
+
+*[See complete adoption reports →](feedback/)*
+
+---
+
+# Architecture Overview
+
+*For teams who want to understand the foundation before diving in*
+
 ## The Core Idea
 
 Rebar is a **swarm coordination framework** built on three layers:
@@ -137,121 +195,78 @@ The swarm gets smarter over time. What one agent discovers, all agents benefit f
 3. Don't update a contract without searching all implementations
 4. Contract changes that break interfaces → plan mode
 
-See [DESIGN.md](DESIGN.md) for the full philosophy and
-[architecture/CONTRACT-TEMPLATE.md](architecture/CONTRACT-TEMPLATE.md)
-for the annotated template.
+*[Complete philosophy → DESIGN.md](DESIGN.md) | [Contract template → architecture/](architecture/CONTRACT-TEMPLATE.md)*
 
 ---
 
-## The Cold Start Quad
-
-Every agent session starts by reading four files in order:
-
-1. **README.md** — what is this project?
-2. **QUICKCONTEXT.md** — what's true right now? (branch, test counts, active work)
-3. **TODO.md** — what needs doing? (tasks + known issues + blockers)
-4. **AGENTS.md** — how do we work? (autonomy rules, testing cascade, contracts)
-
-Plus **CLAUDE.md** for Claude Code-specific config.
-
-This takes 5 minutes and prevents hours of wasted effort. An agent that reads
-QUICKCONTEXT before diving into code knows what branch it's on, what's
-in progress, and what's blocked — instead of guessing from `git log`.
-
----
-
-## Quality Infrastructure
+<details>
+<summary><strong>🔧 Quality Infrastructure</strong> <em>(expand to see automation details)</em></summary>
 
 ### The Steward
 
-An automated quality scanner that produces per-contract health reports:
+Automated quality scanner that produces per-contract health reports:
 
 ```bash
-scripts/steward.sh           # Full scan → JSON + markdown report
 scripts/steward.sh --summary # One-line health check
-ask steward summary          # Same thing, via ASK CLI
+ask steward summary          # Same via ASK CLI
 ```
 
-The Steward checks every contract for completeness (required sections),
-implementation (code references), and testing (test files exist). It routes
-action items to roles: draft contracts → architect, testing gaps → eng lead,
-discoveries → product.
+Routes action items by role: draft contracts → architect, testing gaps → eng lead, discoveries → product.
 
-### Enforcement Scripts
+### Enforcement (Progressive by Tier)
 
-Six standalone checks, each runs in <5 seconds:
+| Tier | What's Enforced | Scripts |
+|------|----------------|---------|
+| **1 - Partial** | Contract refs + TODOs | `check-contract-refs.sh`, `check-todos.sh` |
+| **2 - Adopted** | + headers, freshness, registry | + `check-contract-headers.sh`, `check-freshness.sh` |
+| **3 - Enforced** | + ground truth, strict steward | + `check-ground-truth.sh`, full Steward |
 
-| Script | What It Catches |
-|--------|----------------|
-| `check-contract-headers.sh` | Source files missing `CONTRACT:` headers |
-| `check-contract-refs.sh` | `CONTRACT:` refs pointing to nonexistent files |
-| `check-todos.sh` | Untracked `TODO:` comments (two-tag system) |
-| `check-freshness.sh` | Documentation with stale freshness dates |
-| `compute-registry.sh` | Registry out of sync with contract files |
-| `check-ground-truth.sh` | `METRICS` file doesn't match codebase reality |
-| `check-compliance.sh` | Rebar version/tier/badge/AGENTS.md sections |
+*Run all: `scripts/ci-check.sh` | Pre-commit: `scripts/pre-commit.sh`*
 
-Run them all: `scripts/ci-check.sh`. As a pre-commit hook: `scripts/pre-commit.sh`.
-
-### Tier-Aware Enforcement
-
-Not every check applies to every project. Set your tier in `.rebarrc`:
-
-| Tier | Name | What's Enforced |
-|------|------|----------------|
-| 1 | Partial | Contract refs + TODOs |
-| 2 | Adopted | + headers, freshness, registry, compliance |
-| 3 | Enforced | + ground truth, strict steward |
-
-Scripts automatically skip checks above your tier.
+</details>
 
 ---
 
-## Real-World Results
+<details>
+<summary><strong>📁 Project Structure</strong> <em>(expand to see full layout)</em></summary>
 
-Rebar has been battle-tested across 100+ worktree agent launches in four production projects:
+```
+rebar/
+├── # Getting Started Files
+├── QUICKSTART.md               # 5-minute solo dev setup
+├── FEATURE-DEVELOPMENT.md      # 1-hour guided workflow
+├── CASE-STUDIES.md             # Problem-indexed war stories
+│
+├── # Core Philosophy
+├── DESIGN.md                   # Complete methodology
+├── conventions.md              # Standards & naming
+├── SETUP.md                    # Full adoption guide
+│
+├── # Copy Into Your Project
+├── *.template.md               # Cold Start Quad templates
+├── architecture/               # Contract system + templates
+├── scripts/                    # Enforcement & scanning
+│
+├── # Advanced Patterns
+├── practices/                  # Specialized workflows
+├── profiles/                   # Team size & project type guides
+├── agents/                     # Role definitions & subagent templates
+├── bin/                        # ASK CLI for persistent sessions
+├── feedback/                   # Real-world adoption reports
+└── docs/                       # Proposals & design documents
+```
 
-| Project | Swarm Scale | What Happened |
-|---------|------------|--------------|
-| **Dapple SafeSign** | 18 agents, 3 phases | 17 contracts, 169 headers, **0 merge conflicts**, 3 hours wall clock |
-| **blindpipe** | Selective adoption | Crypto-critical ZK suite. ASK sessions save **10x context** vs ephemeral subagents |
-| **OpenDocKit** | 9 simultaneous agents | 5,824 tests, progressive-fidelity OOXML renderer. Proved the 6-rule agent protocol and recovery patterns |
-| **Office 180** | Multi-repo swarm | Cross-repo namespacing (`CONTRACT:blindpipe/C1-BLOBSTORE.2.1`), AI-native contract frontmatter |
-
-**Key metric from OpenDocKit:** 100% of committed agent work was recoverable after login expiration incidents. Uncommitted work was the only true loss — which the commit-per-chunk protocol minimizes.
-
-See [feedback/](feedback/) for detailed adoption reports.
+</details>
 
 ---
 
-## Getting Started
+# Next Steps
 
-### Quick Start (15 minutes)
+**New to rebar?** → [🚀 Try It (5 min)](QUICKSTART.md)
+**Ready to adopt?** → [❤️ Love It (1 hour)](FEATURE-DEVELOPMENT.md)
+**Need advanced patterns?** → [🎯 Master It](CASE-STUDIES.md)
 
-```bash
-git clone <rebar-repo> /path/to/rebar
-cd /path/to/your-project
-
-# Copy the essentials
-cp /path/to/rebar/README.template.md    README.md
-cp /path/to/rebar/QUICKCONTEXT.template.md QUICKCONTEXT.md
-cp /path/to/rebar/TODO.template.md      TODO.md
-cp /path/to/rebar/AGENTS.template.md    AGENTS.md
-cp /path/to/rebar/CLAUDE.template.md    CLAUDE.md
-cp /path/to/rebar/DESIGN.md        DESIGN.md
-cp -r /path/to/rebar/architecture/      architecture/
-cp -r /path/to/rebar/scripts/           scripts/
-echo "v1.2.0" > .rebar-version
-cp /path/to/rebar/.rebarrc.template     .rebarrc
-
-# Fill in your project details, then verify
-chmod +x scripts/*.sh
-scripts/check-compliance.sh
-```
-
-### Full Setup
-
-See [SETUP.md](SETUP.md) for the complete guide with customization steps.
+**Questions?** → [Ask the architect agent](bin/README.md#ask-cli-reference)
 
 ### Pick Your Profile
 
