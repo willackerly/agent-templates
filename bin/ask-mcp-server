@@ -1,0 +1,735 @@
+#!/usr/bin/env python3
+"""ask-mcp-server — MCP-enabled ASK server.
+
+Extends the existing ASK server with full Model Context Protocol support.
+Exposes ASK agents as MCP tools and agent resources (memory, logs) as MCP resources.
+
+Usage:
+  ask-mcp-server --port 7232 --repos-dir /srv/repos
+  ask-mcp-server --stdio  # MCP over stdio
+  ask-mcp-server --port 7232 --repos-dir /srv/repos --mcp-only  # Pure MCP mode
+
+Environment:
+  ASK_API_KEY    API key for HTTP mode (optional)
+  ASK_MODEL      Claude model passed through to ask CLI (default: sonnet)
+  ASK_BIN        Path to ask CLI (default: ask, found via PATH)
+
+MCP Methods:
+  initialize                       → Initialize MCP session
+  tools/list                       → List all available agent tools
+  tools/call                       → Call an agent tool (ask question)
+  resources/list                   → List agent resources (memory, logs)
+  resources/read                   → Read agent resource content
+
+HTTP API (when not --mcp-only):
+  All existing ASK server endpoints continue to work
+
+MCP-over-HTTP:
+  POST /mcp                        → JSON-RPC 2.0 MCP requests
+  GET  /mcp/schema                 → MCP server capabilities
+"""
+
+import argparse
+import json
+import os
+import subprocess
+import sys
+import threading
+import time
+from http.server import HTTPServer, BaseHTTPRequestHandler
+from pathlib import Path
+from socketserver import ThreadingMixIn
+from urllib.parse import urlparse
+
+# Import the existing ASK server classes
+# Note: In a real implementation, we'd refactor to share code properly
+# For this demo, I'm including the necessary parts inline
+
+
+# ---------------------------------------------------------------------------
+# MCP Protocol Implementation
+# ---------------------------------------------------------------------------
+
+class MCPServer:
+    """Implements the Model Context Protocol for ASK agents."""
+
+    def __init__(self, registry):
+        self.registry = registry
+        self.initialized = False
+
+    def handle_request(self, request):
+        """Handle a JSON-RPC 2.0 MCP request."""
+        try:
+            # Validate JSON-RPC structure
+            if not isinstance(request, dict):
+                return self._error(-32600, "Invalid Request", "Request must be JSON object")
+
+            if request.get("jsonrpc") != "2.0":
+                return self._error(-32600, "Invalid Request", "Must be JSON-RPC 2.0")
+
+            method = request.get("method")
+            params = request.get("params", {})
+            req_id = request.get("id")
+
+            # Route to handler
+            if method == "initialize":
+                return self._handle_initialize(params, req_id)
+            elif method == "tools/list":
+                return self._handle_tools_list(params, req_id)
+            elif method == "tools/call":
+                return self._handle_tools_call(params, req_id)
+            elif method == "resources/list":
+                return self._handle_resources_list(params, req_id)
+            elif method == "resources/read":
+                return self._handle_resources_read(params, req_id)
+            else:
+                return self._error(-32601, "Method not found", f"Unknown method: {method}", req_id)
+
+        except Exception as e:
+            return self._error(-32603, "Internal error", str(e))
+
+    def _handle_initialize(self, params, req_id):
+        """Initialize MCP session."""
+        self.initialized = True
+
+        return {
+            "jsonrpc": "2.0",
+            "id": req_id,
+            "result": {
+                "protocolVersion": "2024-11-05",
+                "capabilities": {
+                    "tools": {
+                        "listChanged": False  # Tools don't change during session
+                    },
+                    "resources": {
+                        "subscribe": False,  # We don't support resource subscriptions yet
+                        "listChanged": False
+                    }
+                },
+                "serverInfo": {
+                    "name": "ask-mcp-server",
+                    "version": "1.0.0",
+                    "description": "MCP server for ASK agent coordination platform"
+                }
+            }
+        }
+
+    def _handle_tools_list(self, params, req_id):
+        """List all available agents as MCP tools."""
+        if not self.initialized:
+            return self._error(-32002, "Not initialized", "Call initialize first", req_id)
+
+        tools = []
+
+        # Convert each agent into an MCP tool
+        for agent_info in self.registry.list_all_agents():
+            repo = agent_info["repo"]
+            role = agent_info["role"]
+            agent_id = agent_info["id"]  # format: "repo:role"
+
+            # Load agent description from AGENT.md if available
+            description = self._get_agent_description(repo, role)
+
+            tool = {
+                "name": f"ask_{agent_id.replace(':', '_')}",
+                "description": description,
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "question": {
+                            "type": "string",
+                            "description": "Question to ask the agent"
+                        },
+                        "verbose": {
+                            "type": "boolean",
+                            "description": "Request verbose response with rationale",
+                            "default": False
+                        }
+                    },
+                    "required": ["question"]
+                }
+            }
+            tools.append(tool)
+
+        return {
+            "jsonrpc": "2.0",
+            "id": req_id,
+            "result": {
+                "tools": tools
+            }
+        }
+
+    def _handle_tools_call(self, params, req_id):
+        """Call an agent tool (ask a question)."""
+        if not self.initialized:
+            return self._error(-32002, "Not initialized", "Call initialize first", req_id)
+
+        tool_name = params.get("name")
+        arguments = params.get("arguments", {})
+
+        if not tool_name:
+            return self._error(-32602, "Invalid params", "Tool name required", req_id)
+
+        # Parse tool name to extract repo and role
+        if not tool_name.startswith("ask_"):
+            return self._error(-32602, "Invalid params", "Invalid tool name format", req_id)
+
+        agent_id = tool_name[4:].replace("_", ":")  # "ask_repo_role" -> "repo:role"
+
+        try:
+            repo, role = agent_id.split(":", 1)
+        except ValueError:
+            return self._error(-32602, "Invalid params", "Invalid agent ID format", req_id)
+
+        question = arguments.get("question")
+        verbose = arguments.get("verbose", False)
+
+        if not question:
+            return self._error(-32602, "Invalid params", "Question required", req_id)
+
+        # Execute the ask command
+        result = self._execute_ask(repo, role, question, verbose)
+
+        if result["success"]:
+            return {
+                "jsonrpc": "2.0",
+                "id": req_id,
+                "result": {
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": result["answer"]
+                        }
+                    ]
+                }
+            }
+        else:
+            return self._error(-32603, "Tool execution failed", result["error"], req_id)
+
+    def _handle_resources_list(self, params, req_id):
+        """List agent resources (memory, logs, configs)."""
+        if not self.initialized:
+            return self._error(-32002, "Not initialized", "Call initialize first", req_id)
+
+        resources = []
+
+        for agent_info in self.registry.list_all_agents():
+            repo = agent_info["repo"]
+            role = agent_info["role"]
+            agent_id = agent_info["id"]
+
+            # Add memory resource
+            resources.append({
+                "uri": f"ask://memory/{agent_id}",
+                "name": f"{agent_id} Memory",
+                "description": f"Current distilled memory for {role} agent in {repo}",
+                "mimeType": "text/markdown"
+            })
+
+            # Add log resource
+            resources.append({
+                "uri": f"ask://log/{agent_id}",
+                "name": f"{agent_id} Log",
+                "description": f"Full interaction history for {role} agent in {repo}",
+                "mimeType": "text/markdown"
+            })
+
+            # Add agent definition resource
+            resources.append({
+                "uri": f"ask://agent/{agent_id}",
+                "name": f"{agent_id} Definition",
+                "description": f"Agent role definition and configuration for {role} in {repo}",
+                "mimeType": "text/markdown"
+            })
+
+        return {
+            "jsonrpc": "2.0",
+            "id": req_id,
+            "result": {
+                "resources": resources
+            }
+        }
+
+    def _handle_resources_read(self, params, req_id):
+        """Read agent resource content."""
+        if not self.initialized:
+            return self._error(-32002, "Not initialized", "Call initialize first", req_id)
+
+        uri = params.get("uri")
+        if not uri:
+            return self._error(-32602, "Invalid params", "Resource URI required", req_id)
+
+        if not uri.startswith("ask://"):
+            return self._error(-32602, "Invalid params", "Invalid ASK resource URI", req_id)
+
+        try:
+            # Parse URI: ask://type/repo:role
+            parts = uri[6:].split("/", 1)  # Remove "ask://"
+            if len(parts) != 2:
+                raise ValueError("Invalid URI format")
+
+            resource_type, agent_id = parts
+            repo, role = agent_id.split(":", 1)
+
+            content = self._get_resource_content(resource_type, repo, role)
+
+            return {
+                "jsonrpc": "2.0",
+                "id": req_id,
+                "result": {
+                    "contents": [
+                        {
+                            "uri": uri,
+                            "mimeType": "text/markdown",
+                            "text": content
+                        }
+                    ]
+                }
+            }
+
+        except Exception as e:
+            return self._error(-32603, "Resource read failed", str(e), req_id)
+
+    def _get_agent_description(self, repo, role):
+        """Get agent description from AGENT.md file."""
+        repo_path = self.registry.get_repo_path(repo)
+        if not repo_path:
+            return f"Agent {role} in repository {repo}"
+
+        agent_file = Path(repo_path) / "agents" / role / "AGENT.md"
+        if agent_file.is_file():
+            try:
+                content = agent_file.read_text()
+                # Extract first paragraph as description
+                lines = content.split('\n')
+                for line in lines:
+                    line = line.strip()
+                    if line and not line.startswith('#'):
+                        return line
+            except Exception:
+                pass
+
+        return f"Agent {role} in repository {repo}"
+
+    def _get_resource_content(self, resource_type, repo, role):
+        """Get content for a specific resource type."""
+        repo_path = self.registry.get_repo_path(repo)
+        if not repo_path:
+            raise ValueError(f"Repository {repo} not found")
+
+        agent_dir = Path(repo_path) / "agents" / role
+
+        if resource_type == "memory":
+            memory_file = agent_dir / "memory.md"
+            if memory_file.is_file():
+                return memory_file.read_text()
+            else:
+                return "(no memory yet)"
+
+        elif resource_type == "log":
+            log_file = agent_dir / "memory.log.md"
+            if log_file.is_file():
+                return log_file.read_text()
+            else:
+                return "(no log entries yet)"
+
+        elif resource_type == "agent":
+            agent_file = agent_dir / "AGENT.md"
+            if agent_file.is_file():
+                return agent_file.read_text()
+            else:
+                return f"# Agent {role}\n\n(no agent definition found)"
+
+        else:
+            raise ValueError(f"Unknown resource type: {resource_type}")
+
+    def _execute_ask(self, repo, role, question, verbose=False):
+        """Execute an ask command and return the result."""
+        repo_path = self.registry.get_repo_path(repo)
+        if not repo_path:
+            return {"success": False, "error": f"Repository {repo} not found"}
+
+        if not self.registry.has_agent(repo, role):
+            return {"success": False, "error": f"Agent {role} not found in repository {repo}"}
+
+        # Build ask command
+        ask_bin = getattr(self, 'ask_bin', 'ask')  # Would be set by server
+        cmd = [ask_bin]
+        if verbose:
+            cmd.append("-v")
+        cmd.extend([role, question])
+
+        try:
+            result = subprocess.run(
+                cmd,
+                cwd=repo_path,
+                capture_output=True,
+                text=True,
+                timeout=300,  # 5 minute timeout
+                env={**os.environ, "ASK_SERVER": ""},  # Prevent recursion
+            )
+
+            if result.returncode == 0:
+                return {"success": True, "answer": result.stdout.strip()}
+            else:
+                return {"success": False, "error": result.stderr.strip() or "Ask command failed"}
+
+        except subprocess.TimeoutExpired:
+            return {"success": False, "error": "Agent query timed out (300s)"}
+        except Exception as e:
+            return {"success": False, "error": f"Execution error: {e}"}
+
+    def _error(self, code, message, data=None, req_id=None):
+        """Create a JSON-RPC error response."""
+        error = {
+            "code": code,
+            "message": message
+        }
+        if data:
+            error["data"] = data
+
+        return {
+            "jsonrpc": "2.0",
+            "id": req_id,
+            "error": error
+        }
+
+
+# ---------------------------------------------------------------------------
+# Copy necessary classes from ask-server for the demo
+# (In a real implementation, we'd refactor to import these)
+# ---------------------------------------------------------------------------
+
+class RepoRegistry:
+    """Scans directories for repos containing agents/ with AGENT.md files."""
+
+    def __init__(self):
+        self.repos = {}  # name → absolute path
+        self._lock = threading.Lock()
+
+    def scan_dir(self, repos_dir):
+        """Scan a directory for repos (subdirs containing agents/)."""
+        repos_dir = Path(repos_dir).resolve()
+        if not repos_dir.is_dir():
+            print(f"ask-mcp-server: warning: repos-dir not found: {repos_dir}", file=sys.stderr)
+            return
+        for entry in sorted(repos_dir.iterdir()):
+            if entry.is_dir() and (entry / "agents").is_dir():
+                self.add_repo(entry.name, str(entry))
+
+    def add_repos(self, paths):
+        """Add explicit repo paths (comma-separated or list)."""
+        for p in paths:
+            p = Path(p).resolve()
+            if p.is_dir() and (p / "agents").is_dir():
+                self.add_repo(p.name, str(p))
+            else:
+                print(f"ask-mcp-server: warning: skipping {p} (no agents/ dir)", file=sys.stderr)
+
+    def add_repo(self, name, path):
+        with self._lock:
+            self.repos[name] = path
+            agents = self._list_agents_for(path)
+            print(f"  registered: {name} → {path} ({len(agents)} agents: {', '.join(agents)})")
+
+    def list_repos(self):
+        with self._lock:
+            result = []
+            for name, path in sorted(self.repos.items()):
+                agents = self._list_agents_for(path)
+                result.append({"repo": name, "path": path, "agents": agents})
+            return result
+
+    def list_all_agents(self):
+        with self._lock:
+            result = []
+            for name, path in sorted(self.repos.items()):
+                for agent in self._list_agents_for(path):
+                    result.append({"repo": name, "role": agent, "id": f"{name}:{agent}"})
+            return result
+
+    def get_repo_path(self, repo_name):
+        with self._lock:
+            return self.repos.get(repo_name)
+
+    def has_agent(self, repo_name, role):
+        path = self.get_repo_path(repo_name)
+        if not path:
+            return False
+        return (Path(path) / "agents" / role / "AGENT.md").is_file()
+
+    def _list_agents_for(self, path):
+        agents_dir = Path(path) / "agents"
+        if not agents_dir.is_dir():
+            return []
+        agents = []
+        for entry in sorted(agents_dir.iterdir()):
+            if entry.is_dir() and (entry / "AGENT.md").is_file():
+                agents.append(entry.name)
+        return agents
+
+
+# ---------------------------------------------------------------------------
+# MCP-enabled HTTP Handler
+# ---------------------------------------------------------------------------
+
+class MCPHandler(BaseHTTPRequestHandler):
+    """HTTP handler that supports both classic ASK API and MCP protocol."""
+
+    # Set by server on startup
+    registry = None
+    api_key = None
+    ask_bin = None
+    mcp_only = False
+
+    def __init__(self, *args, **kwargs):
+        self.mcp = MCPServer(self.registry)
+        self.mcp.ask_bin = self.ask_bin
+        super().__init__(*args, **kwargs)
+
+    def do_GET(self):
+        if not self._check_auth():
+            return
+
+        path = urlparse(self.path).path.rstrip("/")
+
+        if path == "/mcp/schema":
+            # Return MCP server capabilities
+            self._json_ok({
+                "protocol": "mcp",
+                "version": "2024-11-05",
+                "capabilities": {
+                    "tools": {"listChanged": False},
+                    "resources": {"subscribe": False, "listChanged": False}
+                },
+                "serverInfo": {
+                    "name": "ask-mcp-server",
+                    "version": "1.0.0",
+                    "description": "MCP server for ASK agent coordination"
+                }
+            })
+        elif self.mcp_only:
+            self._json_error(404, "Only MCP endpoints available in --mcp-only mode")
+        else:
+            # Handle classic ASK API endpoints
+            self._handle_classic_api_get(path)
+
+    def do_POST(self):
+        if not self._check_auth():
+            return
+
+        path = urlparse(self.path).path.rstrip("/")
+
+        if path == "/mcp":
+            # Handle MCP JSON-RPC request
+            body = self._read_json()
+            if body is None:
+                return
+
+            response = self.mcp.handle_request(body)
+            self._json_ok(response)
+
+        elif self.mcp_only:
+            self._json_error(404, "Only MCP endpoints available in --mcp-only mode")
+        else:
+            # Handle classic ASK API endpoints
+            self._handle_classic_api_post(path)
+
+    def _handle_classic_api_get(self, path):
+        """Handle classic ASK API GET requests."""
+        if path == "/v1/health":
+            self._json_ok({"status": "ok", "repos": len(self.registry.repos), "mcp_enabled": True})
+        elif path == "/v1/agents":
+            self._json_ok(self.registry.list_all_agents())
+        elif path == "/v1/repos":
+            self._json_ok(self.registry.list_repos())
+        else:
+            self._json_error(404, "Not found")
+
+    def _handle_classic_api_post(self, path):
+        """Handle classic ASK API POST requests."""
+        if path == "/v1/ask":
+            self._handle_ask()
+        else:
+            self._json_error(404, "Not found")
+
+    def _handle_ask(self):
+        """Handle classic ASK API ask request."""
+        body = self._read_json()
+        if body is None:
+            return
+
+        repo = body.get("repo", "").strip()
+        role = body.get("role", "").strip()
+        question = body.get("question", "").strip()
+        verbose = body.get("verbose", False)
+
+        if not repo or not role or not question:
+            self._json_error(400, "Required fields: repo, role, question")
+            return
+
+        result = self.mcp._execute_ask(repo, role, question, verbose)
+
+        if result["success"]:
+            self._json_ok({
+                "repo": repo,
+                "role": role,
+                "answer": result["answer"],
+                "exit_code": 0,
+                "error": None
+            })
+        else:
+            self._json_error(500, result["error"])
+
+    def _check_auth(self):
+        """Check API key authentication."""
+        if not self.api_key:
+            return True  # No auth required
+
+        auth_header = self.headers.get("Authorization", "")
+        if not auth_header.startswith("Bearer "):
+            self._json_error(401, "Bearer token required")
+            return False
+
+        token = auth_header[7:]  # Remove "Bearer "
+        if token != self.api_key:
+            self._json_error(403, "Invalid API key")
+            return False
+
+        return True
+
+    def _read_json(self):
+        """Read and parse JSON from request body."""
+        try:
+            length = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(length).decode("utf-8")
+            return json.loads(body)
+        except Exception as e:
+            self._json_error(400, f"Invalid JSON: {e}")
+            return None
+
+    def _json_ok(self, data):
+        """Send successful JSON response."""
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.end_headers()
+        self.wfile.write(json.dumps(data, indent=2).encode())
+
+    def _json_error(self, status, message):
+        """Send error JSON response."""
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json")
+        self.end_headers()
+        self.wfile.write(json.dumps({"error": message}).encode())
+
+
+class ThreadedMCPServer(ThreadingMixIn, HTTPServer):
+    """Multi-threaded MCP server."""
+    pass
+
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="MCP-enabled ASK server",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  %(prog)s --port 7232 --repos-dir /srv/repos
+  %(prog)s --stdio
+  %(prog)s --port 7232 --repos-dir /srv/repos --mcp-only
+        """
+    )
+
+    # Transport mode
+    parser.add_argument("--stdio", action="store_true", help="Use stdio transport (for MCP clients)")
+    parser.add_argument("--port", type=int, default=7232, help="Port for HTTP transport (default: 7232)")
+    parser.add_argument("--host", default="0.0.0.0", help="Host to bind for HTTP (default: 0.0.0.0)")
+
+    # Repository configuration
+    parser.add_argument("--repos-dir", help="Directory containing repos (each subdir with agents/)")
+    parser.add_argument("--repos", help="Comma-separated paths to specific repos")
+
+    # Server options
+    parser.add_argument("--mcp-only", action="store_true", help="Only serve MCP endpoints, not classic ASK API")
+    parser.add_argument("--api-key", default=os.environ.get("ASK_API_KEY", ""), help="API key for auth")
+
+    # ASK CLI configuration
+    default_ask = os.environ.get("ASK_BIN", "")
+    if not default_ask:
+        sibling = Path(__file__).resolve().parent / "ask"
+        default_ask = str(sibling) if sibling.is_file() else "ask"
+    parser.add_argument("--ask-bin", default=default_ask, help="Path to ask CLI")
+
+    args = parser.parse_args()
+
+    if not args.repos_dir and not args.repos:
+        parser.error("Provide --repos-dir or --repos")
+
+    # Build registry
+    registry = RepoRegistry()
+    print("ask-mcp-server: scanning repos...")
+
+    if args.repos_dir:
+        registry.scan_dir(args.repos_dir)
+    if args.repos:
+        registry.add_repos(args.repos.split(","))
+
+    if not registry.repos:
+        print("ask-mcp-server: error: no repos found with agents/ directories", file=sys.stderr)
+        sys.exit(1)
+
+    total_agents = len(registry.list_all_agents())
+    print(f"\nask-mcp-server: {len(registry.repos)} repos, {total_agents} agents")
+
+    if args.stdio:
+        # MCP over stdio
+        print("ask-mcp-server: starting MCP stdio transport", file=sys.stderr)
+        mcp_server = MCPServer(registry)
+        mcp_server.ask_bin = args.ask_bin
+
+        for line in sys.stdin:
+            try:
+                request = json.loads(line.strip())
+                response = mcp_server.handle_request(request)
+                print(json.dumps(response))
+                sys.stdout.flush()
+            except Exception as e:
+                error_response = {
+                    "jsonrpc": "2.0",
+                    "id": None,
+                    "error": {"code": -32603, "message": f"Parse error: {e}"}
+                }
+                print(json.dumps(error_response))
+                sys.stdout.flush()
+
+    else:
+        # HTTP transport
+        MCPHandler.registry = registry
+        MCPHandler.api_key = args.api_key or None
+        MCPHandler.ask_bin = args.ask_bin
+        MCPHandler.mcp_only = args.mcp_only
+
+        server = ThreadedMCPServer((args.host, args.port), MCPHandler)
+
+        mode_desc = "MCP-only" if args.mcp_only else "MCP + classic ASK API"
+        auth_status = "with API key" if args.api_key else "no auth"
+
+        print(f"ask-mcp-server: listening on {args.host}:{args.port} ({mode_desc}, {auth_status})")
+        print(f"ask-mcp-server: MCP endpoint: http://localhost:{args.port}/mcp")
+        if not args.mcp_only:
+            print(f"ask-mcp-server: classic API: http://localhost:{args.port}/v1/agents")
+        print()
+
+        try:
+            server.serve_forever()
+        except KeyboardInterrupt:
+            print("\nask-mcp-server: shutting down")
+            server.shutdown()
+
+
+if __name__ == "__main__":
+    main()
